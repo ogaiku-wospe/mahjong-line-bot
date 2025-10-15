@@ -1399,8 +1399,15 @@ var MessageHandler = class {
           confirmMsg += `${i + 1}\u4F4D: ${name} - ${scores[i].toLocaleString()}\u70B9
 `;
         });
-        const recordCommand = `@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r ${players.join(" ")} ${scores.join(" ")}`;
-        const recordCommandNoMention = `r ${players.join(" ")} ${scores.join(" ")}`;
+        
+        // コマンドを交互形式で生成（名前1 点数1 名前2 点数2 ...）
+        const recordParts = [];
+        for (let i = 0; i < players.length; i++) {
+          recordParts.push(players[i]);
+          recordParts.push(scores[i].toString());
+        }
+        const recordCommand = `@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r ${recordParts.join(" ")}`;
+        const recordCommandNoMention = `r ${recordParts.join(" ")}`;
         
         // KVにメンションなしコマンドを保存（60秒有効）
         if (this.kv) {
