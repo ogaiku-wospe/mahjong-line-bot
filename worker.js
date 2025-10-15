@@ -76,8 +76,35 @@ var Config = class {
       return null;
     }
   }
-  async setCurrentSeason(groupId, seasonKey) {
-    console.log("[DEBUG] setCurrentSeason called but KV is not used");
+  async setCurrentSeason(groupId, seasonKey, sheetsClient = null) {
+    try {
+      if (!sheetsClient) {
+        console.warn("[WARN] setCurrentSeason: sheetsClient not provided");
+        return;
+      }
+      
+      // 全シーズンのis_currentをFALSEに更新
+      const allSeasonsData = await sheetsClient.getValues("season!A:H", this.CONFIG_SHEET_ID);
+      if (allSeasonsData && allSeasonsData.length > 1) {
+        for (let i = 1; i < allSeasonsData.length; i++) {
+          const rowSeasonKey = allSeasonsData[i][1]; // B列: season_key
+          const rowNumber = i + 1;
+          
+          // 指定されたseasonKeyと一致する行のみTRUEに、それ以外はFALSEに設定
+          const isCurrentValue = rowSeasonKey === seasonKey ? "TRUE" : "FALSE";
+          await sheetsClient.updateValues(
+            `season!F${rowNumber}`,
+            [[isCurrentValue]],
+            this.CONFIG_SHEET_ID
+          );
+        }
+      }
+      
+      console.log(`[INFO] Current season switched to: ${seasonKey}`);
+    } catch (error) {
+      console.error("[ERROR] setCurrentSeason failed:", error);
+      throw error;
+    }
   }
   // ========== LINEマッピング機能（player_master統合版） ==========
   // プレイヤー一覧を取得（player_masterシートから）
@@ -715,7 +742,7 @@ var SeasonManager = class {
         "\u767B\u9332\u65E5\u6642"
       ];
       await this.sheets.updateValues(`${seasonKey}!A1:M1`, [headers], this.config.RECORDS_SHEET_ID);
-      await this.config.setCurrentSeason(groupId, seasonKey);
+      await this.config.setCurrentSeason(groupId, seasonKey, this.sheets);
       return { success: true, seasonKey };
     } catch (error) {
       console.error("createSeason Error:", error);
@@ -1600,7 +1627,7 @@ var CommandRouter = class {
       const seasonSwitchMatch = command.match(/^(シーズン切替|sw|season switch)\s+(.+)$/);
       if (seasonSwitchMatch) {
         const seasonKey = seasonSwitchMatch[2].trim();
-        await this.handleSeasonSwitch(groupId, seasonKey, replyToken);
+        await this.handleSeasonSwitch(groupId, seasonKey, replyToken, ctx);
         return;
       }
       if (command.match(/^(シーズン一覧|sl|seasons)$/)) {
@@ -2138,9 +2165,33 @@ ${error.message}`);
       await processCreation();
     }
   }
-  async handleSeasonSwitch(groupId, seasonKey, replyToken) {
-    await this.config.setCurrentSeason(groupId, seasonKey);
-    await this.lineAPI.replyMessage(replyToken, `\u30B7\u30FC\u30BA\u30F3\u3092\u300C${seasonKey}\u300D\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\u3002`);
+  async handleSeasonSwitch(groupId, seasonKey, replyToken, ctx = null) {
+    // 即座に確認メッセージを返す
+    await this.lineAPI.replyMessage(replyToken, `\u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\u4E2D\u3067\u3059...`);
+    
+    // バックグラウンドでシーズン切り替え処理を実行
+    const processSwitching = async () => {
+      try {
+        await this.config.setCurrentSeason(groupId, seasonKey, this.sheets);
+        await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\u307E\u3057\u305F
+
+\u73FE\u5728\u306E\u30B7\u30FC\u30BA\u30F3: ${seasonKey}
+
+\u2705 \u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002`);
+      } catch (error) {
+        console.error("[ERROR] Background season switch failed:", error);
+        await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u5207\u308A\u66FF\u3048\u306B\u5931\u6557\u3057\u307E\u3057\u305F
+
+${error.message}`);
+      }
+    };
+    
+    // ctx.waitUntilでバックグラウンド実行
+    if (ctx) {
+      ctx.waitUntil(processSwitching());
+    } else {
+      await processSwitching();
+    }
   }
   async handleSeasonList(groupId, replyToken) {
     const seasons = await this.seasonManager.getAllSeasons();
