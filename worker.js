@@ -3156,6 +3156,13 @@ var RankingImageGenerator = class {
   // HTMLをPNGに変換
   async convertHtmlToPng(html, rankingData = null, seasonKey = null) {
     console.log("[INFO] Converting HTML to PNG...");
+    
+    // HTMLからサイズを検出
+    const isStatsImage = html.includes('Chart.js') || html.includes('width: 1200px');
+    const viewportWidth = isStatsImage ? 1200 : 800;
+    const viewportHeight = isStatsImage ? 1400 : 1100;
+    console.log(`[INFO] Detected image type: ${isStatsImage ? 'stats' : 'ranking'}, size: ${viewportWidth}x${viewportHeight}`);
+    
     const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
     const hasAbstract = this.env?.ABSTRACT_API_KEY;
     console.log("[DEBUG] Environment variables check:");
@@ -3174,9 +3181,10 @@ var RankingImageGenerator = class {
           },
           body: JSON.stringify({
             html,
-            viewport_width: 800,
-            viewport_height: 1100,
-            device_scale: 2
+            viewport_width: viewportWidth,
+            viewport_height: viewportHeight,
+            device_scale: 2,
+            ms_delay: isStatsImage ? 3000 : 1000 // Chart.js rendering wait time
           })
         });
         console.log("[DEBUG] HCTI API response status:", response.status);
@@ -3208,7 +3216,7 @@ var RankingImageGenerator = class {
         await this.kv.put(tempKey, html, { expirationTtl: 300 });
         const tempUrl = `https://mahjong-line-bot.ogaiku.workers.dev/temp/${tempKey}`;
         const response = await fetch(
-          `https://screenshot.abstractapi.com/v1/?api_key=${this.env.ABSTRACT_API_KEY}&url=${encodeURIComponent(tempUrl)}&width=800&height=1000`
+          `https://screenshot.abstractapi.com/v1/?api_key=${this.env.ABSTRACT_API_KEY}&url=${encodeURIComponent(tempUrl)}&width=${viewportWidth}&height=${viewportHeight}`
         );
         if (response.ok) {
           const buffer = await response.arrayBuffer();
