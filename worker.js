@@ -1285,14 +1285,29 @@ var MessageHandler = class {
     if (this.kv && !isMentioned) {
       const kvKey = `image_analysis_result:${groupId}`;
       const storedCommand = await this.kv.get(kvKey);
+      console.log("[DEBUG] No mention detected - Checking KV");
+      console.log("[DEBUG] GroupId:", groupId);
+      console.log("[DEBUG] KV Key:", kvKey);
+      console.log("[DEBUG] Stored command:", storedCommand);
+      console.log("[DEBUG] Received text:", text.trim());
+      
       if (storedCommand && text.trim() === storedCommand.trim()) {
         isImageAnalysisCommand = true;
         await this.kv.delete(kvKey);
         console.log("[INFO] Image analysis command detected (no mention required)");
+      } else if (storedCommand) {
+        console.log("[WARN] Command mismatch - stored vs received");
+        console.log("[WARN] Stored length:", storedCommand.length);
+        console.log("[WARN] Received length:", text.trim().length);
+        // 送信してデバッグ
+        await this.lineAPI.pushMessage(groupId, `[DEBUG] コマンドが一致しません\n\n保存: ${storedCommand}\n\n受信: ${text.trim()}`);
+      } else {
+        console.log("[DEBUG] No stored command found in KV");
       }
     }
     
     if (!isMentioned && !isImageAnalysisCommand) {
+      console.log("[DEBUG] Message ignored - no mention and not image analysis command");
       return;
     }
     
