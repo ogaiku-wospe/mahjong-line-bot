@@ -1550,7 +1550,7 @@ __name(MessageHandler, "MessageHandler");
 
 // src/command-router.js
 var CommandRouter = class {
-  constructor(config, lineAPI, spreadsheetManager, playerManager, seasonManager, scoreCalculator, sheetsClient, rankingImageGenerator, messageHandler = null) {
+  constructor(config, lineAPI, spreadsheetManager, playerManager, seasonManager, scoreCalculator, sheetsClient, rankingImageGenerator, messageHandler = null, env = null) {
     this.config = config;
     this.lineAPI = lineAPI;
     this.spreadsheetManager = spreadsheetManager;
@@ -1560,6 +1560,7 @@ var CommandRouter = class {
     this.sheets = sheetsClient;
     this.rankingImageGenerator = rankingImageGenerator;
     this.messageHandler = messageHandler;
+    this.env = env;
   }
   async route(command, groupId, userId, replyToken, mentionedUsers = [], ctx = null) {
     try {
@@ -1644,10 +1645,8 @@ var CommandRouter = class {
         await this.handlePlayerList(groupId, replyToken);
         return;
       }
-      await this.lineAPI.replyMessage(
-        replyToken,
-        "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n\n\u3088\u304F\u4F7F\u3046\u30B3\u30DE\u30F3\u30C9\uFF08\u77ED\u7E2E\u5F62\uFF09:\n\u30FB \u8A18\u9332: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D] [\u70B9\u6570] ...\n\u30FB \u30E9\u30F3\u30AD\u30F3\u30B0: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n\u30FB \u53D6\u6D88: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u"
-      );
+      // AI推測機能を試す
+      await this.handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx);
     } catch (error) {
       console.error("CommandRouter Error:", error);
       await this.lineAPI.replyMessage(replyToken, `\u25A0 \u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F
@@ -1666,6 +1665,115 @@ ${error.toString()}
   async showHelp(replyToken) {
     const helpText = "\u3010\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B3\u30DE\u30F3\u30C9\u4E00\u89A7\u3011\n\n\u25A0 \u8A18\u9332\u7BA1\u7406\n\u3010\u624B\u52D5\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r \u5C71\u7530 32000 \u9234\u6728 28000 \u4F50\u85E4 24000 \u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  \u5C71\u7530 32000\n  \u9234\u6728 28000\n  \u4F50\u85E4 24000\n  \u7530\u4E2D 16000\n\n\u3010\u30E1\u30F3\u30B7\u30E7\u30F3\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u5C71\u7530 32000 @\u9234\u6728 28000 @\u4F50\u85E4 24000 @\u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  @\u5C71\u7530 32000\n  @\u9234\u6728 28000\n  @\u4F50\u85E4 24000\n  @\u7530\u4E2D 16000\n\n\u3010\u753B\u50CF\u89E3\u6790\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\u89E3\u6790\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot img\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u89E3\u6790\n  1. \u30B3\u30DE\u30F3\u30C9\u3092\u5B9F\u884C\n  2. 60\u79D2\u4EE5\u5185\u306B\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9001\u4FE1\n  3. \u89E3\u6790\u7D50\u679C\u306E\u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3057\u3066\u8A18\u9332\n\n\u3010\u53D6\u308A\u6D88\u3057\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u53D6\u6D88\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u\n  \u76F4\u524D\u306E\u8A18\u9332\u3092\u524A\u9664\n\n\u25A0 \u7D71\u8A08\u8868\u793A\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n  \u5168\u4F53\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u8868\u793A\uFF08\u30C6\u30AD\u30B9\u30C8\u5F62\u5F0F\uFF09\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\u753B\u50CF\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rankimg\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot ri\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\n  \u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u753B\u50CF\u3092\u751F\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u7D71\u8A08 [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st \u5C71\u7530\n  \u500B\u4EBA\u306E\u8A73\u7D30\u7D71\u8A08\u3092\u8868\u793A\n\n\u25A0 \u30B7\u30FC\u30BA\u30F3\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc [\u540D\u524D]\n  \u65B0\u3057\u3044\u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u5207\u66FF [\u30AD\u30FC]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw [\u30AD\u30FC]\n  \u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sl\n  \u5168\u30B7\u30FC\u30BA\u30F3\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D7\u30EC\u30A4\u30E4\u30FC\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr [\u540D\u524D]\n  \u30D7\u30EC\u30A4\u30E4\u30FC\u3092\u767B\u9332\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u5C71\u7530 SHIROKUMA3\n  LINE\u30A2\u30AB\u30A6\u30F3\u30C8\u3068\u96C0\u9B42\u540D\u3092\u7D10\u4ED8\u3051\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pl\n  \u767B\u9332\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n  \u3053\u306E\u30D8\u30EB\u30D7\u3092\u8868\u793A";
     await this.lineAPI.replyMessage(replyToken, helpText);
+  }
+  // ========== AI推測機能 ==========
+  async handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx) {
+    try {
+      // Gemini APIキーがない場合は従来のエラーメッセージ
+      if (!this.env || !this.env.GEMINI_API_KEY) {
+        await this.lineAPI.replyMessage(
+          replyToken,
+          "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n\n\u3088\u304F\u4F7F\u3046\u30B3\u30DE\u30F3\u30C9\uFF08\u77ED\u7E2E\u5F62\uFF09:\n\u30FB \u8A18\u9332: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D] [\u70B9\u6570] ...\n\u30FB \u30E9\u30F3\u30AD\u30F3\u30B0: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n\u30FB \u53D6\u6D88: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u"
+        );
+        return;
+      }
+
+      // AIに推測させる
+      const suggestedCommand = await this.suggestCommandWithAI(command);
+      
+      if (!suggestedCommand) {
+        // 推測できない場合は従来のエラーメッセージ
+        await this.lineAPI.replyMessage(
+          replyToken,
+          "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n\n\u3088\u304F\u4F7F\u3046\u30B3\u30DE\u30F3\u30C9\uFF08\u77ED\u7E2E\u5F62\uFF09:\n\u30FB \u8A18\u9332: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D] [\u70B9\u6570] ...\n\u30FB \u30E9\u30F3\u30AD\u30F3\u30B0: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n\u30FB \u53D6\u6D88: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u"
+        );
+        return;
+      }
+
+      // 推測結果を表示して自動実行
+      await this.lineAPI.replyMessage(
+        replyToken,
+        `\u{1F916} AI\u304C\u30B3\u30DE\u30F3\u30C9\u3092\u63A8\u6E2C\u3057\u307E\u3057\u305F\uFF1A\n\n${suggestedCommand}\n\n\u5B9F\u884C\u4E2D...`
+      );
+
+      // 推測したコマンドを実行
+      await this.route(suggestedCommand, groupId, userId, null, mentionedUsers, ctx);
+      
+    } catch (error) {
+      console.error("[ERROR] handleInvalidCommand failed:", error);
+      await this.lineAPI.replyMessage(
+        replyToken,
+        "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h"
+      );
+    }
+  }
+  
+  async suggestCommandWithAI(userInput) {
+    try {
+      const prompt = `あなたは麻雀点数管理botのコマンド補完AIです。ユーザーの入力から、最も適切なコマンドを推測してください。
+
+# 利用可能なコマンド一覧
+- 記録/r/rec: 対戦結果を記録（例: r 山田 32000 鈴木 28000 佐藤 24000 田中 16000）
+- 取消/u/undo: 直前の記録を取消
+- ランキング/rank/ranking: 全体ランキング表示
+- ランキング画像/rankimg/ri/画像: ランキング画像生成
+- 画像解析/img/image/解析: 画像から点数を抽出
+- 統計/st/stats: 個人統計表示（例: st 山田）
+- シーズン作成/sc: 新シーズン作成（例: sc 2024春）
+- シーズン切替/sw: シーズン切替（例: sw season1_20241015）
+- シーズン一覧/sl/seasons: シーズン一覧表示
+- プレイヤー登録/pr: プレイヤー登録（例: pr 山田）
+- プレイヤー一覧/pl/players: プレイヤー一覧表示
+- ヘルプ/h/help: ヘルプ表示
+
+# ユーザー入力
+"${userInput}"
+
+# 指示
+1. ユーザーの意図を推測してください
+2. 最も適切なコマンドを1つだけ返してください
+3. コマンドのみを返し、説明は不要です
+4. 推測できない場合はnullを返してください
+
+例:
+- 入力: "らんきんぐ" → 出力: "rank"
+- 入力: "とうけい おがいく" → 出力: "st ogaiku"
+- 入力: "きろく" → 出力: "r"
+- 入力: "しーずん いちらん" → 出力: "sl"`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.env.GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 100
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        console.error("[ERROR] Gemini API failed:", await response.text());
+        return null;
+      }
+
+      const data = await response.json();
+      const suggestedCommand = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      
+      if (suggestedCommand && suggestedCommand.toLowerCase() !== "null") {
+        console.log("[INFO] AI suggested command:", suggestedCommand);
+        return suggestedCommand;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("[ERROR] suggestCommandWithAI failed:", error);
+      return null;
+    }
   }
   // ========== 新規追加: メンション付きプレイヤー登録 ==========
   async handlePlayerRegisterWithMention(groupId, mentionedUser, playerName, replyToken) {
@@ -2690,7 +2798,8 @@ async function handleLineWebhook(request, env, ctx) {
     scoreCalculator,
     sheetsClient,
     rankingImageGenerator,
-    messageHandler
+    messageHandler,
+    env
   );
   const body = await request.json();
   console.log("[DEBUG] Webhook received - Event count:", body.events?.length || 0);
