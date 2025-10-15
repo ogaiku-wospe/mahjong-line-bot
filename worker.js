@@ -822,17 +822,11 @@ var ImageAnalyzer = class {
       console.log("[INFO] Starting image analysis for messageId:", messageId);
       const imageBuffer = await this.getImageBlob(messageId);
       console.log("[INFO] Image buffer retrieved, size:", imageBuffer.byteLength, "bytes");
-      const extractedText = await this.callVisionAPI(imageBuffer);
-      console.log("[INFO] Vision API completed, text length:", extractedText ? extractedText.length : 0);
-      if (extractedText) {
-        console.log("[INFO] Extracted text preview:", extractedText.substring(0, 300));
-      }
-      if (!extractedText) {
-        console.error("[ERROR] No text extracted from image");
-        return { success: false, error: "\u753B\u50CF\u304B\u3089\u30C6\u30AD\u30B9\u30C8\u3092\u62BD\u51FA\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u753B\u50CF\u304C\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002" };
-      }
-      const result = await this.callGemini(extractedText);
-      console.log("[INFO] Gemini API completed");
+      
+      // Gemini Vision APIで直接画像解析（高精度）
+      const result = await this.callGeminiVision(imageBuffer);
+      console.log("[INFO] Gemini Vision API completed");
+      
       if (result.success && result.players && result.players.length >= 3) {
         const players = [];
         const scores = [];
@@ -881,6 +875,115 @@ var ImageAnalyzer = class {
       binary += String.fromCharCode.apply(null, chunk);
     }
     return btoa(binary);
+  }
+  // Gemini Vision APIで直接画像を解析（高精度）
+  async callGeminiVision(imageBuffer) {
+    try {
+      console.log("[INFO] Calling Gemini Vision API...");
+      const base64Image = this.arrayBufferToBase64(imageBuffer);
+      console.log("[INFO] Base64 encoding completed, length:", base64Image.length);
+      
+      // 登録済みプレイヤー名を取得してプロンプトに含める
+      let playerNamesHint = "";
+      if (this.sheetsClient) {
+        const players = await this.config.getPlayers(this.sheetsClient);
+        if (players && players.length > 0) {
+          const names = players.map(p => p.playerName).join("、");
+          playerNamesHint = `\n\n# 登録済みプレイヤー名（参考）\n以下のいずれかの名前である可能性が高いです：\n${names}\n\nOCRで誤認識している可能性があるため、これらの名前に近い文字列が見つかった場合は、登録済み名前を優先してください。`;
+        }
+      }
+      
+      const prompt = `# タスク
+麻雀アプリ「雀魂（じゃんたま）」の対戦結果画面から、プレイヤー情報を抽出してJSON形式で返してください。
+
+# 画像の特徴
+- 対戦結果画面には各プレイヤーのニックネームと最終点数が表示されています
+- プレイヤー名には日本語（ひらがな、カタカナ、漢字）、英数字、記号が含まれる可能性があります
+- 点数は5桁または6桁の数値です（例：32000、-800）
+${playerNamesHint}
+
+# 抽出ルール
+1. プレイヤー名（ニックネーム）と最終点数を正確に抽出
+2. 点数は整数のみ（カンマなし）、マイナス点数も対応
+3. 3名または4名のプレイヤーが含まれているはず
+4. 点数の合計が約100,000点（四麻）または105,000点（三麻）になるはず
+5. プレイヤー名に特殊文字や絵文字が含まれていても正確に抽出
+6. 類似した文字（例：1とl、0とO）に注意して正確に認識
+
+# 出力形式
+以下のJSON形式のみを返してください（説明文やコードブロック記号は不要）：
+{"players":[{"nickname":"プレイヤー名1","score":32000},{"nickname":"プレイヤー名2","score":28000},{"nickname":"プレイヤー名3","score":24000},{"nickname":"プレイヤー名4","score":16000}]}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.geminiKey}`;
+      const payload = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: base64Image
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 2000
+        }
+      };
+      
+      console.log("[INFO] Using Gemini Vision (direct image analysis)");
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      
+      console.log("[INFO] Gemini Vision API response status:", response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[ERROR] Gemini Vision API HTTP error:", response.status, errorText);
+        throw new Error("Gemini Vision API error: " + response.status);
+      }
+      
+      const result = await response.json();
+      if (result.error) {
+        console.error("[ERROR] Gemini Vision API error:", JSON.stringify(result.error));
+        throw new Error("Gemini Vision API error: " + result.error.message);
+      }
+      
+      if (result.candidates && result.candidates[0]) {
+        const content = result.candidates[0].content;
+        if (content.parts && content.parts[0] && content.parts[0].text) {
+          const textContent = content.parts[0].text;
+          console.log("[INFO] Gemini Vision response received, parsing JSON...");
+          console.log("[DEBUG] Response text:", textContent.substring(0, 500));
+          
+          let jsonMatch = textContent.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            jsonMatch = textContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+            if (jsonMatch) {
+              jsonMatch = [jsonMatch[1]];
+            }
+          }
+          
+          if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            console.log("[INFO] JSON parsed successfully, player count:", data.players ? data.players.length : 0);
+            return { success: true, players: data.players };
+          } else {
+            console.error("[ERROR] No JSON found in Gemini Vision response");
+            throw new Error("Failed to parse Gemini Vision response");
+          }
+        }
+      }
+      throw new Error("Invalid Gemini Vision API response structure");
+    } catch (e) {
+      console.error("[ERROR] Gemini Vision API Error:", e.message);
+      console.error("[ERROR] Error stack:", e.stack);
+      throw e;
+    }
   }
   async callVisionAPI(imageBuffer) {
     try {
