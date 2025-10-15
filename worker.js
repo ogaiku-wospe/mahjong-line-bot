@@ -3427,9 +3427,11 @@ var StatsImageGenerator = class {
     const gameScores = []; // 各ゲームのスコアを保存
     const gameRanks = []; // 各ゲームの順位を保存
     
-    const timeSeriesData = playerRecords.map((record) => {
+    const timeSeriesData = playerRecords.map((record, index) => {
       // 全体のゲーム番号を取得（records配列でのインデックス + 1）
-      const totalGameNumber = records.indexOf(record) + 1;
+      const globalGameNumber = records.indexOf(record) + 1;
+      const gameNumber = index + 1; // プレイヤーの参加ゲーム番号
+      
       // プレイヤーの点数と順位を取得
       let playerRawScore = 0;
       let playerRank = 0;
@@ -3474,7 +3476,8 @@ var StatsImageGenerator = class {
       gameRanks.push(playerRank);
       
       return {
-        gameNumber: totalGameNumber,
+        gameNumber: gameNumber,
+        globalGameNumber: globalGameNumber,
         score: cumulativeScore,
         gameScore: gameScore,
         rank: playerRank,
