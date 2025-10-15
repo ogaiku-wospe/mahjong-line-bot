@@ -1216,7 +1216,7 @@ __name(MessageHandler, "MessageHandler");
 
 // src/command-router.js
 var CommandRouter = class {
-  constructor(config, lineAPI, spreadsheetManager, playerManager, seasonManager, scoreCalculator, sheetsClient, rankingImageGenerator) {
+  constructor(config, lineAPI, spreadsheetManager, playerManager, seasonManager, scoreCalculator, sheetsClient, rankingImageGenerator, messageHandler = null) {
     this.config = config;
     this.lineAPI = lineAPI;
     this.spreadsheetManager = spreadsheetManager;
@@ -1225,6 +1225,7 @@ var CommandRouter = class {
     this.calculator = scoreCalculator;
     this.sheets = sheetsClient;
     this.rankingImageGenerator = rankingImageGenerator;
+    this.messageHandler = messageHandler;
   }
   async route(command, groupId, userId, replyToken, mentionedUsers = [], ctx = null) {
     try {
@@ -1674,6 +1675,11 @@ ${imageResult.error}`);
   }
   // 画像解析リクエスト
   async handleImageAnalysisRequest(groupId, replyToken) {
+    // 画像解析モードを有効化（60秒間有効）
+    if (this.messageHandler) {
+      this.messageHandler.lastMentionTime.set(groupId, Date.now());
+      console.log("[INFO] Image analysis mode activated for group:", groupId);
+    }
     await this.lineAPI.replyMessage(
       replyToken,
       "\u25A0 \u753B\u50CF\u89E3\u6790\u30E2\u30FC\u30C9\n\n60\u79D2\u4EE5\u5185\u306B\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9001\u4FE1\u3057\u3066\u304F\u3060\u3055\u3044\u3002\n\u89E3\u6790\u7D50\u679C\u304C\u8868\u793A\u3055\u308C\u3001\u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A18\u9332\u3067\u304D\u307E\u3059\u3002"
@@ -2239,7 +2245,8 @@ async function handleLineWebhook(request, env, ctx) {
     seasonManager,
     scoreCalculator,
     sheetsClient,
-    rankingImageGenerator
+    rankingImageGenerator,
+    messageHandler
   );
   const body = await request.json();
   for (const event of body.events) {
