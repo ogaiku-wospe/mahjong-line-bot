@@ -3424,7 +3424,12 @@ var StatsImageGenerator = class {
 
     // 時系列データを作成（合計スコア推移）
     let cumulativeScore = 0;
-    const timeSeriesData = playerRecords.map((record, index) => {
+    const gameScores = []; // 各ゲームのスコアを保存
+    const gameRanks = []; // 各ゲームの順位を保存
+    
+    const timeSeriesData = playerRecords.map((record) => {
+      // 全体のゲーム番号を取得（records配列でのインデックス + 1）
+      const totalGameNumber = records.indexOf(record) + 1;
       // プレイヤーの点数と順位を取得
       let playerRawScore = 0;
       let playerRank = 0;
@@ -3465,14 +3470,46 @@ var StatsImageGenerator = class {
       }
       
       cumulativeScore += gameScore;
+      gameScores.push(gameScore);
+      gameRanks.push(playerRank);
       
       return {
-        gameNumber: index + 1,
+        gameNumber: totalGameNumber,
         score: cumulativeScore,
+        gameScore: gameScore,
+        rank: playerRank,
         date: record['対戦日'] || '',
         time: record['対戦時刻'] || ''
       };
     });
+    
+    // 追加統計を計算
+    const maxGameScore = gameScores.length > 0 ? Math.max(...gameScores) : 0;
+    const minGameScore = gameScores.length > 0 ? Math.min(...gameScores) : 0;
+    
+    // 連続トップ記録
+    let currentTopStreak = 0;
+    let maxTopStreak = 0;
+    for (const rank of gameRanks) {
+      if (rank === 1) {
+        currentTopStreak++;
+        maxTopStreak = Math.max(maxTopStreak, currentTopStreak);
+      } else {
+        currentTopStreak = 0;
+      }
+    }
+    
+    // 連続ラス記録
+    let currentLastStreak = 0;
+    let maxLastStreak = 0;
+    for (const rank of gameRanks) {
+      if (rank === 4) {
+        currentLastStreak++;
+        maxLastStreak = Math.max(maxLastStreak, currentLastStreak);
+      } else {
+        currentLastStreak = 0;
+      }
+    }
 
     // 順位分布データ
     const rankData = [
@@ -3575,8 +3612,9 @@ var StatsImageGenerator = class {
     }
     .chart-wrapper {
       position: relative;
-      height: 420px;
-      padding-top: 20px;
+      height: 500px;
+      padding-top: 40px;
+      padding-bottom: 15px;
     }
     .positive {
       color: #28a745;
@@ -3659,26 +3697,24 @@ var StatsImageGenerator = class {
         </div>
       </div>
 
-      <!-- 勝率統計 -->
+      <!-- スコア記録 -->
       <div class="stat-card">
-        <h2>勝率統計</h2>
+        <h2>スコア記録</h2>
         <div class="stat-row">
-          <span class="stat-row-label">トップ率</span>
-          <span class="stat-row-value positive">
-            ${playerStats.totalGames > 0 ? ((playerStats.rankDist[1] || 0) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
-          </span>
+          <span class="stat-row-label">最高獲得pt</span>
+          <span class="stat-row-value positive">${maxGameScore >= 0 ? '+' : ''}${maxGameScore.toFixed(1)}pt</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">連対率</span>
-          <span class="stat-row-value">
-            ${playerStats.totalGames > 0 ? (((playerStats.rankDist[1] || 0) + (playerStats.rankDist[2] || 0)) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
-          </span>
+          <span class="stat-row-label">最低獲得pt</span>
+          <span class="stat-row-value negative">${minGameScore >= 0 ? '+' : ''}${minGameScore.toFixed(1)}pt</span>
         </div>
         <div class="stat-row">
-          <span class="stat-row-label">ラス回避率</span>
-          <span class="stat-row-value">
-            ${playerStats.totalGames > 0 ? ((playerStats.totalGames - (playerStats.rankDist[4] || 0)) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
-          </span>
+          <span class="stat-row-label">連続トップ</span>
+          <span class="stat-row-value">${maxTopStreak}回</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">連続ラス</span>
+          <span class="stat-row-value">${maxLastStreak}回</span>
         </div>
       </div>
 
@@ -3714,7 +3750,7 @@ var StatsImageGenerator = class {
     new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.gameNumber}戦`))},
+        labels: ${JSON.stringify(timeSeriesData.map(d => `全体の第${d.globalGameNumber}戦`))},
         datasets: [{
           label: '合計スコア',
           data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
@@ -3821,7 +3857,8 @@ var StatsImageGenerator = class {
           },
           datalabels: {
             anchor: 'end',
-            align: 'top',
+            align: 'end',
+            offset: 6,
             color: '#495057',
             font: {
               size: 18,
