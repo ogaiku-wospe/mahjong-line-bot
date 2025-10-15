@@ -1117,9 +1117,23 @@ var MessageHandler = class {
     const text = event.message.text;
     const mentions = event.message.mention ? event.message.mention.mentionees : [];
     const isMentioned = mentions.some((m) => m.isSelf);
-    if (!isMentioned) {
+    
+    // 画像解析結果からの記録コマンドかチェック（メンションなしでも許可）
+    let isImageAnalysisCommand = false;
+    if (this.kv && !isMentioned) {
+      const kvKey = `image_analysis_result:${groupId}`;
+      const storedCommand = await this.kv.get(kvKey);
+      if (storedCommand && text.trim() === storedCommand.trim()) {
+        isImageAnalysisCommand = true;
+        await this.kv.delete(kvKey);
+        console.log("[INFO] Image analysis command detected (no mention required)");
+      }
+    }
+    
+    if (!isMentioned && !isImageAnalysisCommand) {
       return;
     }
+    
     const userMentions = mentions.filter((m) => !m.isSelf);
     const mentionedUsers = [];
     for (const mention of userMentions) {
@@ -1138,7 +1152,11 @@ var MessageHandler = class {
       }
     }
     const command = text.replace(/@\S+\s*/g, "").trim();
-    this.lastMentionTime.set(groupId, Date.now());
+    
+    if (this.kv && isMentioned) {
+      this.lastMentionTime.set(groupId, Date.now());
+    }
+    
     await commandRouter.route(command, groupId, userId, replyToken, mentionedUsers, ctx);
   }
   async handleImageMessage(event, ctx) {
@@ -1178,13 +1196,11 @@ var MessageHandler = class {
     
     if (!lastMention) {
       console.log("[INFO] Image ignored - No recent mention found");
-      await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像を受信しましたが、画像解析モードが有効ではありません。\n\n先に「@麻雀点数管理bot 画像解析」を実行してください。\n\nGroupID: " + groupId.substring(0, 10) + "...");
       return;
     }
     
     if (timeSinceLastMention > 60) {
       console.log("[INFO] Image ignored - Timeout (>60s)");
-      await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像解析モードがタイムアウトしました（60秒経過）。\n\n再度「@麻雀点数管理bot 画像解析」を実行してください。");
       if (this.kv) {
         await this.kv.delete(`image_analysis_mode:${groupId}`);
       } else {
@@ -1222,6 +1238,15 @@ var MessageHandler = class {
 `;
         });
         const recordCommand = `@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r ${players.join(" ")} ${scores.join(" ")}`;
+        const recordCommandNoMention = `r ${players.join(" ")} ${scores.join(" ")}`;
+        
+        // KVにメンションなしコマンドを保存（60秒有効）
+        if (this.kv) {
+          const kvKey = `image_analysis_result:${groupId}`;
+          await this.kv.put(kvKey, recordCommandNoMention, { expirationTtl: 60 });
+          console.log("[INFO] Stored command in KV for quick reply:", recordCommandNoMention);
+        }
+        
         confirmMsg += `
 \u8A18\u9332\u3059\u308B\u306B\u306F\u4EE5\u4E0B\u3092\u9001\u4FE1:
 ${recordCommand}
@@ -1231,7 +1256,7 @@ ${recordCommand}
           {
             type: "message",
             label: "\u3053\u306E\u5185\u5BB9\u3067\u8A18\u9332",
-            text: recordCommand
+            text: recordCommandNoMention
           }
         ]);
         console.log("[INFO] Success message sent to group");
@@ -1744,7 +1769,7 @@ ${imageResult.error}`);
       
       await this.lineAPI.replyMessage(
         replyToken,
-        "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。\n\n[DEBUG] GroupID: " + groupId.substring(0, 10) + "..."
+        "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。"
       );
     } else {
       console.error("[ERROR] messageHandler is not available!");
