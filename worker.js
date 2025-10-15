@@ -3566,6 +3566,9 @@ var StatsImageGenerator = class {
     ];
 
     const sign = playerStats.totalScore >= 0 ? '+' : '';
+    
+    // ランダムグラデーションを1回だけ取得
+    const gradientColor = this.getRandomGradient();
 
     const html = `
 <!DOCTYPE html>
@@ -3584,7 +3587,7 @@ var StatsImageGenerator = class {
     }
     body {
       font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
-      background: linear-gradient(135deg, ${this.getRandomGradient()});
+      background: linear-gradient(135deg, ${gradientColor});
       padding: 40px;
       width: 1200px;
       min-height: 1400px;
@@ -3596,7 +3599,7 @@ var StatsImageGenerator = class {
       overflow: hidden;
     }
     .header {
-      background: linear-gradient(135deg, ${this.getRandomGradient()});
+      background: linear-gradient(135deg, ${gradientColor});
       color: white;
       padding: 40px;
       text-align: center;
@@ -3658,9 +3661,9 @@ var StatsImageGenerator = class {
     }
     .chart-wrapper {
       position: relative;
-      height: 500px;
-      padding-top: 40px;
-      padding-bottom: 15px;
+      height: 520px;
+      padding-top: 50px;
+      padding-bottom: 20px;
     }
     .positive {
       color: #28a745;
@@ -3796,7 +3799,7 @@ var StatsImageGenerator = class {
     new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: ${JSON.stringify(timeSeriesData.map(d => `全体の第${d.globalGameNumber}戦`))},
+        labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.globalGameNumber}戦`))},
         datasets: [{
           label: '合計スコア',
           data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
@@ -3904,7 +3907,7 @@ var StatsImageGenerator = class {
           datalabels: {
             anchor: 'end',
             align: 'end',
-            offset: 6,
+            offset: 8,
             color: '#495057',
             font: {
               size: 18,
