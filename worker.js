@@ -1698,8 +1698,17 @@ ${error.toString()}
       if (!this.env || !this.env.GEMINI_API_KEY) {
         await this.lineAPI.replyMessage(
           replyToken,
-          "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n\n\u3088\u304F\u4F7F\u3046\u30B3\u30DE\u30F3\u30C9\uFF08\u77ED\u7E2E\u5F62\uFF09:\n\u30FB \u8A18\u9332: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D] [\u70B9\u6570] ...\n\u30FB \u30E9\u30F3\u30AD\u30F3\u30B0: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n\u30FB \u53D6\u6D88: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u"
+          "コマンドが認識できませんでした\n\n使い方を確認:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・取消: @麻雀点数管理bot u"
         );
+        return;
+      }
+
+      // 質問形式かどうかをチェック（「〜したい」「〜方法」「どうやって」など）
+      const isQuestion = /したい|方法|どうやって|どうすれば|やり方|教えて|わからない|できる|見たい/.test(command);
+      
+      if (isQuestion) {
+        // 質問形式の場合はAI回答機能を使用
+        await this.answerQuestionWithAI(command, replyToken, groupId);
         return;
       }
 
@@ -1707,16 +1716,13 @@ ${error.toString()}
       const suggestedCommand = await this.suggestCommandWithAI(command);
       
       if (!suggestedCommand) {
-        // 推測できない場合は従来のエラーメッセージ
-        await this.lineAPI.replyMessage(
-          replyToken,
-          "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n\n\u3088\u304F\u4F7F\u3046\u30B3\u30DE\u30F3\u30C9\uFF08\u77ED\u7E2E\u5F62\uFF09:\n\u30FB \u8A18\u9332: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D] [\u70B9\u6570] ...\n\u30FB \u30E9\u30F3\u30AD\u30F3\u30B0: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n\u30FB \u53D6\u6D88: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u"
-        );
+        // 推測できない場合はAI回答機能を試す
+        await this.answerQuestionWithAI(command, replyToken, groupId);
         return;
       }
 
       // 引数が必要なコマンドかチェック
-      const needsArgCommand = suggestedCommand.match(/^(sw|sc|st|pr)$/);
+      const needsArgCommand = suggestedCommand.match(/^(sw|sc|st|stimg|pr)$/);
       if (needsArgCommand) {
         // 引数が必要なコマンドの場合は、選択肢を提示
         await this.provideCommandOptions(suggestedCommand, groupId, replyToken);
@@ -1849,17 +1855,20 @@ ${error.toString()}
       } else if (commandType === "sl") {
         await this.handleSeasonList(groupId, replyToken);
         return;
-      } else if (commandType === "st") {
+      } else if (commandType === "st" || commandType === "stimg") {
         // プレイヤー一覧を取得
         const players = await this.config.getPlayers(this.sheets);
+        const commandName = commandType === "st" ? "統計表示（テキスト）" : "統計表示（グラフ画像）";
+        const commandExample = commandType === "st" ? "st" : "stimg";
+        
         if (players.length === 0) {
-          message = "\u25A0 \u7D71\u8A08\u8868\u793A\n\n\u767B\u9332\u6E08\u307F\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u3044\u307E\u305B\u3093\u3002\n\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr [\u540D\u524D]\u300D\u3067\u767B\u9332\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+          message = `■${commandName}\n\n登録済みプレイヤーがいません。\n\n「@麻雀点数管理bot pr [名前]」で登録してください。`;
         } else {
-          message = "\u25A0 \u7D71\u8A08\u8868\u793A\n\n\u30D7\u30EC\u30A4\u30E4\u30FC\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n";
+          message = `■${commandName}\n\nプレイヤー名を指定してください：\n\n`;
           players.forEach((player) => {
-            message += `\u30FB ${player.playerName}\n`;
+            message += `・${player.playerName}\n`;
           });
-          message += "\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st " + players[0].playerName;
+          message += `\n例: @麻雀点数管理bot ${commandExample} ${players[0].playerName}`;
         }
       } else if (commandType === "sc") {
         message = "\u25A0 \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210\n\n\u30B7\u30FC\u30BA\u30F3\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc 2024\u79CB";
@@ -1874,6 +1883,103 @@ ${error.toString()}
     }
   }
   
+  // コマンドリファレンスを使って質問に回答
+  async answerQuestionWithAI(userQuestion, replyToken, groupId) {
+    try {
+      const commandRef = this.getCommandReference();
+      
+      const prompt = `あなたは麻雀点数管理botのサポートAIです。ユーザーの質問に対して、適切なコマンドと使い方を教えてください。
+
+# コマンドリファレンス
+${commandRef}
+
+# ユーザーの質問
+"${userQuestion}"
+
+# 指示
+1. ユーザーの質問に対して、適切なコマンドを見つけてください
+2. コマンドの使い方を簡潔に説明してください
+3. 具体的なコマンド例を提示してください
+4. 200文字以内で回答してください
+
+回答形式:
+【[機能名]】
+コマンド: @麻雀点数管理bot [コマンド]
+説明: [簡潔な説明]
+例: [具体例]`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.env.GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.5,
+              maxOutputTokens: 300
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+      if (answer) {
+        await this.lineAPI.replyMessage(replyToken, answer);
+      } else {
+        await this.lineAPI.replyMessage(
+          replyToken,
+          "申し訳ございません。回答を生成できませんでした。\n\n@麻雀点数管理bot h でヘルプを確認してください。"
+        );
+      }
+    } catch (error) {
+      console.error("[ERROR] answerQuestionWithAI failed:", error);
+      await this.lineAPI.replyMessage(
+        replyToken,
+        "申し訳ございません。エラーが発生しました。\n\n@麻雀点数管理bot h でヘルプを確認してください。"
+      );
+    }
+  }
+
+  // コマンドリファレンス（AI参照用）
+  getCommandReference() {
+    return `# 麻雀点数管理bot コマンドリファレンス
+
+## 記録管理
+- 手動記録: 記録/r [名前1] [点数1] [名前2] [点数2] [名前3] [点数3] [名前4] [点数4]
+- メンション記録: 記録/r @ユーザー1 [点数1] @ユーザー2 [点数2] ...
+- 画像解析: 画像解析/img（60秒以内に雀魂のスクリーンショット送信）
+- 記録取消: 取消/u（直前の記録のみ）
+
+## ランキング・統計
+- テキストランキング: ランキング/rank
+- 画像ランキング: ランキング画像/ri
+- テキスト統計: 統計/st [プレイヤー名]
+- 画像統計: 統計画像/stimg [プレイヤー名]（グラフ表示）
+
+## シーズン管理
+- シーズン作成: シーズン作成/sc [シーズン名]（自動的にアクティブ化）
+- シーズン切替: シーズン切替/sw [シーズン名]
+- シーズン一覧: シーズン一覧/sl
+
+## プレイヤー管理
+- プレイヤー登録: プレイヤー登録/pr [プレイヤー名]
+- プレイヤー一覧: プレイヤー一覧/pl
+
+## よくある質問
+Q: シーズンを切り替えたい → A: @麻雀点数管理bot sw [シーズン名]
+Q: 直前の記録を取り消したい → A: @麻雀点数管理bot u
+Q: ランキングを画像で見たい → A: @麻雀点数管理bot ri
+Q: 統計をグラフで見たい → A: @麻雀点数管理bot stimg [名前]
+Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン名]`;
+  }
+
   async suggestCommandWithAI(userInput) {
     try {
       const prompt = `あなたは麻雀点数管理botのコマンド補完AIです。ユーザーの入力から、最も適切なコマンドを推測してください。
@@ -1884,9 +1990,10 @@ ${error.toString()}
 - ランキング/rank/ranking: 全体ランキング表示
 - ランキング画像/rankimg/ri/画像: ランキング画像生成
 - 画像解析/img/image/解析: 画像から点数を抽出
-- 統計/st/stats: 個人統計表示（例: st 山田）
+- 統計/st/stats: 個人統計表示（テキスト）
+- 統計画像/stimg/statsimg: 個人統計グラフ画像
 - シーズン作成/sc: 新シーズン作成（例: sc 2024春）
-- シーズン切替/sw: シーズン切替（例: sw season1_20241015）
+- シーズン切替/sw: シーズン切替（例: sw 2024春）
 - シーズン一覧/sl/seasons: シーズン一覧表示
 - プレイヤー登録/pr: プレイヤー登録（例: pr 山田）
 - プレイヤー一覧/pl/players: プレイヤー一覧表示
