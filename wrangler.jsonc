@@ -1,0 +1,13 @@
+{
+  "name": "mahjong-line-bot",
+  "main": "worker.js",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "kv_namespaces": [
+    {
+      "binding": "IMAGES",
+      "id": "253e79eb3fe04b7f8e322ff66471f590",
+      "preview_id": "aeb1b2d04e544947a5531c93c8671ca9"
+    }
+  ]
+}
