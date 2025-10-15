@@ -1811,6 +1811,95 @@ ${error.toString()}
             } else {
               await this.lineAPI.pushMessage(groupId, "■ エラー\n\n画像解析機能が利用できません。管理者に連絡してください。");
             }
+          } else if (suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)) {
+            // 記録コマンド - バックグラウンド実行用
+            const dataStr = suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)[2];
+            const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+            
+            if (!seasonKey) {
+              await this.lineAPI.pushMessage(
+                groupId,
+                "シーズンが設定されていません。\n「@麻雀点数管理bot シーズン作成 [名前]」で作成してください。"
+              );
+              return;
+            }
+            
+            // データをパース
+            const tokens = dataStr.trim().split(/[\s\n]+/).filter((t) => t);
+            if (tokens.length < 4 || tokens.length % 2 !== 0) {
+              await this.lineAPI.pushMessage(
+                groupId,
+                "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
+              );
+              return;
+            }
+            
+            const players = [];
+            const scores = [];
+            for (let i = 0; i < tokens.length; i += 2) {
+              players.push(tokens[i]);
+              const score = parseInt(tokens[i + 1]);
+              if (isNaN(score)) {
+                await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
+                return;
+              }
+              scores.push(score);
+            }
+            
+            const gameType = players.length === 3 ? "三麻半荘" : "四麻半荘";
+            const totalScore = scores.reduce((a, b) => a + b, 0);
+            const expectedTotal = players.length === 3 ? 105e3 : 1e5;
+            
+            console.log("[DEBUG] AI suggested record - Players:", players.join(", "));
+            console.log("[DEBUG] AI suggested record - Scores:", scores.join(", "));
+            console.log("[DEBUG] AI suggested record - Total:", totalScore);
+            console.log("[DEBUG] AI suggested record - Expected:", expectedTotal);
+            
+            if (Math.abs(totalScore - expectedTotal) > 1e3) {
+              await this.lineAPI.pushMessage(
+                groupId,
+                `■ 点数の確認\n\n入力された合計: ${totalScore.toLocaleString()}点\n正しい合計: ${expectedTotal.toLocaleString()}点 (${gameType})\n差分: ${(totalScore - expectedTotal).toLocaleString()}点\n\n各プレイヤーの点数:\n${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}点`).join('\n')}\n\n点数を確認してください。`
+              );
+              return;
+            }
+            
+            // 記録を追加
+            const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
+              gameType,
+              players,
+              scores,
+              userId
+            });
+            
+            if (result.success) {
+              let message = "■ 記録を追加しました\n\n";
+              message += `【対戦結果】 ${gameType}\n`;
+              const sortedResults = [];
+              for (let i = 0; i < players.length; i++) {
+                const rank = this.calculator.calculateRank(scores[i], scores);
+                const gameScore = this.calculator.calculateGameScore(
+                  scores[i],
+                  gameType,
+                  rank,
+                  players.length
+                );
+                sortedResults.push({
+                  name: players[i],
+                  score: scores[i],
+                  rank,
+                  gameScore
+                });
+              }
+              sortedResults.sort((a, b) => a.rank - b.rank);
+              sortedResults.forEach((r) => {
+                const sign = r.gameScore >= 0 ? "+" : "";
+                message += `${r.rank}位 ${r.name}: ${r.score.toLocaleString()}点 (${sign}${r.gameScore.toFixed(1)}pt)\n`;
+              });
+              await this.lineAPI.pushMessage(groupId, message);
+              await this.handleRanking(groupId, null, true);
+            } else {
+              await this.lineAPI.pushMessage(groupId, `■ 記録の追加に失敗しました\n\n${result.error}`);
+            }
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
