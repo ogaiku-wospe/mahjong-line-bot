@@ -2551,17 +2551,26 @@ async function handleLineWebhook(request, env, ctx) {
     messageHandler
   );
   const body = await request.json();
+  console.log("[DEBUG] Webhook received - Event count:", body.events?.length || 0);
+  
   for (const event of body.events) {
+    console.log("[DEBUG] Event type:", event.type);
+    console.log("[DEBUG] Event source:", JSON.stringify(event.source));
+    
     if (event.type === "message") {
-      if (event.message.type === "text") {
+      console.log("[DEBUG] Message type:", event.message?.type);
+      if (event.message?.type === "text") {
+        console.log("[DEBUG] Message text:", event.message.text);
         await messageHandler.handleTextMessage(event, commandRouter, ctx);
-      } else if (event.message.type === "image") {
+      } else if (event.message?.type === "image") {
         await messageHandler.handleImageMessage(event, ctx);
       }
     } else if (event.type === "join") {
       const groupId = event.source.groupId;
       const welcomeMessage = "\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot\u3067\u3059\u3002\n\n\u4F7F\u3044\u65B9: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D8\u30EB\u30D7\n\u6700\u521D\u306B\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u30B7\u30FC\u30BA\u30F3\u540D]\u300D\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
       await lineAPI.pushMessage(groupId, welcomeMessage);
+    } else {
+      console.log("[WARN] Unhandled event type:", event.type);
     }
   }
   return new Response(JSON.stringify({ status: "success" }), {
