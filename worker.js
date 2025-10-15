@@ -1160,15 +1160,24 @@ var MessageHandler = class {
     console.log("[INFO] Time since last mention:", timeSinceLastMention, "seconds");
     console.log("[INFO] All tracked groups:", Array.from(this.lastMentionTime.keys()));
     
-    if (!lastMention || timeSinceLastMention > 60) {
-      console.log("[INFO] Image ignored - No recent mention or timeout (>60s)");
+    if (!lastMention) {
+      console.log("[INFO] Image ignored - No recent mention found");
+      // デバッグメッセージを送信
+      await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像を受信しましたが、画像解析モードが有効ではありません。\n\n先に「@麻雀点数管理bot 画像解析」を実行してください。\n\nGroupID: " + groupId.substring(0, 10) + "...");
+      return;
+    }
+    
+    if (timeSinceLastMention > 60) {
+      console.log("[INFO] Image ignored - Timeout (>60s)");
+      await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像解析モードがタイムアウトしました（60秒経過）。\n\n再度「@麻雀点数管理bot 画像解析」を実行してください。");
+      this.lastMentionTime.delete(groupId);
       return;
     }
     
     console.log("[INFO] Image accepted! Starting analysis...");
     this.lastMentionTime.delete(groupId);
     
-    await this.lineAPI.replyMessage(replyToken, "📸 画像を受信しました\n解析中です...少々お待ちください\n\n（解析には5-10秒ほどかかります）");
+    await this.lineAPI.replyMessage(replyToken, "■ 画像を受信しました\n\n解析中です...少々お待ちください\n（解析には5-10秒ほどかかります）");
     ctx.waitUntil(
       this.processImageAsync(groupId, messageId)
     );
@@ -1696,14 +1705,19 @@ ${imageResult.error}`);
       console.log("[INFO] Image analysis mode activated for group:", groupId);
       console.log("[INFO] Timestamp set:", timestamp);
       console.log("[INFO] Verification - stored timestamp:", this.messageHandler.lastMentionTime.get(groupId));
+      
+      // デバッグ: グループIDを返信メッセージに含める
+      await this.lineAPI.replyMessage(
+        replyToken,
+        "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。\n\n[DEBUG] GroupID: " + groupId.substring(0, 10) + "..."
+      );
     } else {
       console.error("[ERROR] messageHandler is not available!");
+      await this.lineAPI.replyMessage(
+        replyToken,
+        "■ エラー\n\n画像解析機能が利用できません。管理者に連絡してください。"
+      );
     }
-    
-    await this.lineAPI.replyMessage(
-      replyToken,
-      "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。"
-    );
   }
   async handleStats(groupId, playerName, replyToken) {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
