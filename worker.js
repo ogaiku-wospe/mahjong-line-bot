@@ -3614,6 +3614,33 @@ var StatsImageGenerator = class {
         </div>
       </div>
 
+      <!-- 勝率統計 -->
+      <div class="stat-card">
+        <h2>🎲 勝率統計</h2>
+        <div class="stat-row">
+          <span class="stat-row-label">トップ率</span>
+          <span class="stat-row-value positive">
+            ${playerStats.totalGames > 0 ? ((playerStats.rankDist[1] || 0) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
+          </span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">連対率</span>
+          <span class="stat-row-value">
+            ${playerStats.totalGames > 0 ? (((playerStats.rankDist[1] || 0) + (playerStats.rankDist[2] || 0)) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
+          </span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">ラス回避率</span>
+          <span class="stat-row-value">
+            ${playerStats.totalGames > 0 ? ((playerStats.totalGames - (playerStats.rankDist[4] || 0)) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
+          </span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">平均着順</span>
+          <span class="stat-row-value">${playerStats.avgRank.toFixed(2)}位</span>
+        </div>
+      </div>
+
       <!-- スコア推移グラフ -->
       <div class="chart-container">
         <h2>📉 累積ポイント推移</h2>
