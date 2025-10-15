@@ -3173,6 +3173,7 @@ var RankingImageGenerator = class {
       try {
         console.log("[INFO] Trying htmlcsstoimage.com API...");
         const auth = btoa(`${this.env.HCTI_API_USER_ID}:${this.env.HCTI_API_KEY}`);
+        
         const response = await fetch("https://hcti.io/v1/image", {
           method: "POST",
           headers: {
@@ -3184,12 +3185,16 @@ var RankingImageGenerator = class {
             viewport_width: viewportWidth,
             viewport_height: viewportHeight,
             device_scale: 2,
-            ms_delay: isStatsImage ? 2000 : 500 // Chart.js rendering wait time
+            ms_delay: 0 // No delay to avoid timeout
           })
         });
+        
         console.log("[DEBUG] HCTI API response status:", response.status);
         if (response.ok) {
-          const data = await response.json();
+          console.log("[INFO] HCTI API response OK, parsing JSON...");
+          const text = await response.text();
+          console.log("[INFO] Response text length:", text.length);
+          const data = JSON.parse(text);
           console.log("[INFO] HCTI API returned URL:", data.url);
           // 直接URLを返す（ダウンロードはスキップしてCPU時間を節約）
           console.log("[INFO] HCTI conversion successful, returning URL directly");
@@ -3200,6 +3205,7 @@ var RankingImageGenerator = class {
         }
       } catch (error) {
         console.error("[ERROR] HCTI API exception:", error.message);
+        console.error("[ERROR] Error stack:", error.stack);
       }
     } else {
       console.warn("[WARN] HCTI API credentials not found, skipping...");
@@ -3254,6 +3260,19 @@ var RankingImageGenerator = class {
         throw new Error("PNG conversion failed");
       }
       console.log(`[INFO] Conversion method: ${conversionResult.method}`);
+      
+      // HCTI URLを直接返す場合（CPU時間を節約）
+      if (conversionResult.url) {
+        console.log('[INFO] Ranking image generation COMPLETED (direct URL)');
+        console.log('[INFO] HCTI URL:', conversionResult.url);
+        return {
+          success: true,
+          imageUrl: conversionResult.url,
+          format: 'png',
+          method: conversionResult.method
+        };
+      }
+      
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(7);
       const imageKey = `rankings/${timestamp}-${random}.png`;
