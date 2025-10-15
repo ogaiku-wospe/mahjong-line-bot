@@ -1142,22 +1142,33 @@ var MessageHandler = class {
   }
   async handleImageMessage(event, ctx) {
     const sourceType = event.source.type;
+    console.log("[DEBUG] Image message received - Source type:", sourceType);
     if (sourceType !== "group") {
+      console.log("[DEBUG] Image ignored - Not from group");
       return;
     }
     const groupId = event.source.groupId;
     const replyToken = event.replyToken;
     const messageId = event.message.id;
+    console.log("[DEBUG] Image details - GroupId:", groupId, "MessageId:", messageId, "ReplyToken:", replyToken);
+    
     const lastMention = this.lastMentionTime.get(groupId);
     const now = Date.now();
     const timeSinceLastMention = lastMention ? (now - lastMention) / 1e3 : null;
-    console.log("[INFO] Image received - GroupId:", groupId, "Time since last mention:", timeSinceLastMention, "seconds");
+    console.log("[INFO] Image received - GroupId:", groupId);
+    console.log("[INFO] Last mention time:", lastMention, "Current time:", now);
+    console.log("[INFO] Time since last mention:", timeSinceLastMention, "seconds");
+    console.log("[INFO] All tracked groups:", Array.from(this.lastMentionTime.keys()));
+    
     if (!lastMention || timeSinceLastMention > 60) {
-      console.log("[INFO] Image ignored - No recent mention");
+      console.log("[INFO] Image ignored - No recent mention or timeout (>60s)");
       return;
     }
+    
+    console.log("[INFO] Image accepted! Starting analysis...");
     this.lastMentionTime.delete(groupId);
-    await this.lineAPI.replyMessage(replyToken, "\u753B\u50CF\u3092\u53D7\u4FE1\u3057\u307E\u3057\u305F\n\u89E3\u6790\u4E2D\u3067\u3059...\u5C11\u3005\u304A\u5F85\u3061\u304F\u3060\u3055\u3044\n\n\uFF08\u89E3\u6790\u306B\u306F5-10\u79D2\u307B\u3069\u304B\u304B\u308A\u307E\u3059\uFF09");
+    
+    await this.lineAPI.replyMessage(replyToken, "📸 画像を受信しました\n解析中です...少々お待ちください\n\n（解析には5-10秒ほどかかります）");
     ctx.waitUntil(
       this.processImageAsync(groupId, messageId)
     );
@@ -1675,14 +1686,23 @@ ${imageResult.error}`);
   }
   // 画像解析リクエスト
   async handleImageAnalysisRequest(groupId, replyToken) {
+    console.log("[DEBUG] handleImageAnalysisRequest called - GroupId:", groupId);
+    console.log("[DEBUG] messageHandler exists:", !!this.messageHandler);
+    
     // 画像解析モードを有効化（60秒間有効）
     if (this.messageHandler) {
-      this.messageHandler.lastMentionTime.set(groupId, Date.now());
+      const timestamp = Date.now();
+      this.messageHandler.lastMentionTime.set(groupId, timestamp);
       console.log("[INFO] Image analysis mode activated for group:", groupId);
+      console.log("[INFO] Timestamp set:", timestamp);
+      console.log("[INFO] Verification - stored timestamp:", this.messageHandler.lastMentionTime.get(groupId));
+    } else {
+      console.error("[ERROR] messageHandler is not available!");
     }
+    
     await this.lineAPI.replyMessage(
       replyToken,
-      "\u25A0 \u753B\u50CF\u89E3\u6790\u30E2\u30FC\u30C9\n\n60\u79D2\u4EE5\u5185\u306B\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9001\u4FE1\u3057\u3066\u304F\u3060\u3055\u3044\u3002\n\u89E3\u6790\u7D50\u679C\u304C\u8868\u793A\u3055\u308C\u3001\u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A18\u9332\u3067\u304D\u307E\u3059\u3002"
+      "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。"
     );
   }
   async handleStats(groupId, playerName, replyToken) {
