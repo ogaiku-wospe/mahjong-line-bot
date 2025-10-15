@@ -1690,10 +1690,18 @@ ${error.toString()}
         return;
       }
 
-      // 推測結果を表示して自動実行
+      // 引数が必要なコマンドかチェック
+      const needsArgCommand = suggestedCommand.match(/^(sw|sc|st|pr)$/);
+      if (needsArgCommand) {
+        // 引数が必要なコマンドの場合は、選択肢を提示
+        await this.provideCommandOptions(suggestedCommand, groupId, replyToken);
+        return;
+      }
+
+      // 引数不要なコマンドは自動実行
       await this.lineAPI.replyMessage(
         replyToken,
-        `\u{1F916} AI\u304C\u30B3\u30DE\u30F3\u30C9\u3092\u63A8\u6E2C\u3057\u307E\u3057\u305F\uFF1A\n\n${suggestedCommand}\n\n\u5B9F\u884C\u4E2D...`
+        `\u25A0 \u30B3\u30DE\u30F3\u30C9\u3092\u63A8\u6E2C\u3057\u307E\u3057\u305F: ${suggestedCommand}\n\n\u5B9F\u884C\u4E2D...`
       );
 
       // 推測したコマンドを実行
@@ -1705,6 +1713,53 @@ ${error.toString()}
         replyToken,
         "\u25A0 \u30B3\u30DE\u30F3\u30C9\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\n\n\u4F7F\u3044\u65B9\u3092\u78BA\u8A8D:\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h"
       );
+    }
+  }
+  
+  async provideCommandOptions(commandType, groupId, replyToken) {
+    try {
+      let message = "";
+      
+      if (commandType === "sw") {
+        // シーズン一覧を取得
+        const seasons = await this.seasonManager.getAllSeasons();
+        const currentSeason = await this.config.getCurrentSeason(groupId, this.sheets);
+        
+        if (seasons.length === 0) {
+          message = "\u25A0 \u5229\u7528\u53EF\u80FD\u306A\u30B7\u30FC\u30BA\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\n\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc [\u540D\u524D]\u300D\u3067\u4F5C\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+        } else {
+          message = "\u25A0 \u30B7\u30FC\u30BA\u30F3\u5207\u66FF\n\n\u4EE5\u4E0B\u306E\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n";
+          seasons.forEach((season) => {
+            const current = season.key === currentSeason ? " (\u73FE\u5728)" : "";
+            message += `${season.name} [${season.key}]${current}\n`;
+          });
+          message += "\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw " + seasons[0].key;
+        }
+      } else if (commandType === "sl") {
+        await this.handleSeasonList(groupId, replyToken);
+        return;
+      } else if (commandType === "st") {
+        // プレイヤー一覧を取得
+        const players = await this.config.getPlayers(this.sheets);
+        if (players.length === 0) {
+          message = "\u25A0 \u7D71\u8A08\u8868\u793A\n\n\u767B\u9332\u6E08\u307F\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u3044\u307E\u305B\u3093\u3002\n\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr [\u540D\u524D]\u300D\u3067\u767B\u9332\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+        } else {
+          message = "\u25A0 \u7D71\u8A08\u8868\u793A\n\n\u30D7\u30EC\u30A4\u30E4\u30FC\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n";
+          players.forEach((player) => {
+            message += `\u30FB ${player.playerName}\n`;
+          });
+          message += "\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st " + players[0].playerName;
+        }
+      } else if (commandType === "sc") {
+        message = "\u25A0 \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210\n\n\u30B7\u30FC\u30BA\u30F3\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc 2024\u79CB";
+      } else if (commandType === "pr") {
+        message = "\u25A0 \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332\n\n\u30D7\u30EC\u30A4\u30E4\u30FC\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr \u5C71\u7530";
+      }
+      
+      await this.lineAPI.replyMessage(replyToken, message);
+    } catch (error) {
+      console.error("[ERROR] provideCommandOptions failed:", error);
+      await this.lineAPI.replyMessage(replyToken, "\u25A0 \u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h \u3067\u30D8\u30EB\u30D7\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
     }
   }
   
