@@ -1626,11 +1626,25 @@ ${error.toString()}
       const gameType = players.length === 3 ? "\u4E09\u9EBB\u534A\u8358" : "\u56DB\u9EBB\u534A\u8358";
       const totalScore = scores.reduce((a, b) => a + b, 0);
       const expectedTotal = players.length === 3 ? 105e3 : 1e5;
+      
+      console.log("[DEBUG] Mention score validation - Players:", players.join(", "));
+      console.log("[DEBUG] Mention score validation - Scores:", scores.join(", "));
+      console.log("[DEBUG] Mention score validation - Total:", totalScore);
+      console.log("[DEBUG] Mention score validation - Expected:", expectedTotal);
+      console.log("[DEBUG] Mention score validation - Difference:", Math.abs(totalScore - expectedTotal));
+      
       if (Math.abs(totalScore - expectedTotal) > 1e3) {
         await this.lineAPI.replyMessage(
           replyToken,
-          `\u70B9\u6570\u306E\u5408\u8A08\u304C${totalScore.toLocaleString()}\u70B9\u3067\u3059\u3002
-(${gameType}\u306E\u5834\u5408\u3001\u901A\u5E38${expectedTotal.toLocaleString()}\u70B9)
+          `\u25A0 \u70B9\u6570\u306E\u78BA\u8A8D
+
+\u5165\u529B\u3055\u308C\u305F\u5408\u8A08: ${totalScore.toLocaleString()}\u70B9
+\u6B63\u3057\u3044\u5408\u8A08: ${expectedTotal.toLocaleString()}\u70B9 (${gameType})
+\u5DEE\u5206: ${(totalScore - expectedTotal).toLocaleString()}\u70B9
+
+\u5404\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u70B9\u6570:
+${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
+
 \u70B9\u6570\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`
         );
         return;
@@ -1712,6 +1726,13 @@ ${result.error}`);
     const gameType = players.length === 3 ? "\u4E09\u9EBB\u534A\u8358" : "\u56DB\u9EBB\u534A\u8358";
     const totalScore = scores.reduce((a, b) => a + b, 0);
     const expectedTotal = players.length === 3 ? 105e3 : 1e5;
+    
+    console.log("[DEBUG] Score validation - Players:", players.join(", "));
+    console.log("[DEBUG] Score validation - Scores:", scores.join(", "));
+    console.log("[DEBUG] Score validation - Total:", totalScore);
+    console.log("[DEBUG] Score validation - Expected:", expectedTotal);
+    console.log("[DEBUG] Score validation - Difference:", Math.abs(totalScore - expectedTotal));
+    
     if (Math.abs(totalScore - expectedTotal) > 1e3) {
       await this.lineAPI.replyMessage(
         replyToken,
@@ -1720,6 +1741,9 @@ ${result.error}`);
 \u5165\u529B\u3055\u308C\u305F\u5408\u8A08: ${totalScore.toLocaleString()}\u70B9
 \u6B63\u3057\u3044\u5408\u8A08: ${expectedTotal.toLocaleString()}\u70B9 (${gameType})
 \u5DEE\u5206: ${(totalScore - expectedTotal).toLocaleString()}\u70B9
+
+\u5404\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u70B9\u6570:
+${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
 
 \u70B9\u6570\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`
       );
