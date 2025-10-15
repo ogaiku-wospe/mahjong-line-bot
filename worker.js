@@ -1100,9 +1100,10 @@ __name(LineAPI, "LineAPI");
 
 // src/message-handler.js
 var MessageHandler = class {
-  constructor(lineAPI, imageAnalyzer) {
+  constructor(lineAPI, imageAnalyzer, kvBinding = null) {
     this.lineAPI = lineAPI;
     this.imageAnalyzer = imageAnalyzer;
+    this.kv = kvBinding;
     this.lastMentionTime = /* @__PURE__ */ new Map();
   }
   async handleTextMessage(event, commandRouter, ctx = null) {
@@ -1152,17 +1153,31 @@ var MessageHandler = class {
     const messageId = event.message.id;
     console.log("[DEBUG] Image details - GroupId:", groupId, "MessageId:", messageId, "ReplyToken:", replyToken);
     
-    const lastMention = this.lastMentionTime.get(groupId);
+    // KVから画像解析モードの状態を取得
+    let lastMention = null;
+    if (this.kv) {
+      const kvKey = `image_analysis_mode:${groupId}`;
+      const stored = await this.kv.get(kvKey);
+      if (stored) {
+        lastMention = parseInt(stored, 10);
+        console.log("[INFO] Retrieved lastMention from KV:", lastMention);
+      } else {
+        console.log("[INFO] No lastMention found in KV for key:", kvKey);
+      }
+    } else {
+      // フォールバック: メモリから取得
+      lastMention = this.lastMentionTime.get(groupId);
+      console.log("[INFO] Retrieved lastMention from memory:", lastMention);
+    }
+    
     const now = Date.now();
     const timeSinceLastMention = lastMention ? (now - lastMention) / 1e3 : null;
     console.log("[INFO] Image received - GroupId:", groupId);
     console.log("[INFO] Last mention time:", lastMention, "Current time:", now);
     console.log("[INFO] Time since last mention:", timeSinceLastMention, "seconds");
-    console.log("[INFO] All tracked groups:", Array.from(this.lastMentionTime.keys()));
     
     if (!lastMention) {
       console.log("[INFO] Image ignored - No recent mention found");
-      // デバッグメッセージを送信
       await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像を受信しましたが、画像解析モードが有効ではありません。\n\n先に「@麻雀点数管理bot 画像解析」を実行してください。\n\nGroupID: " + groupId.substring(0, 10) + "...");
       return;
     }
@@ -1170,12 +1185,22 @@ var MessageHandler = class {
     if (timeSinceLastMention > 60) {
       console.log("[INFO] Image ignored - Timeout (>60s)");
       await this.lineAPI.pushMessage(groupId, "[DEBUG] 画像解析モードがタイムアウトしました（60秒経過）。\n\n再度「@麻雀点数管理bot 画像解析」を実行してください。");
-      this.lastMentionTime.delete(groupId);
+      if (this.kv) {
+        await this.kv.delete(`image_analysis_mode:${groupId}`);
+      } else {
+        this.lastMentionTime.delete(groupId);
+      }
       return;
     }
     
     console.log("[INFO] Image accepted! Starting analysis...");
-    this.lastMentionTime.delete(groupId);
+    
+    // KVから削除
+    if (this.kv) {
+      await this.kv.delete(`image_analysis_mode:${groupId}`);
+    } else {
+      this.lastMentionTime.delete(groupId);
+    }
     
     await this.lineAPI.replyMessage(replyToken, "■ 画像を受信しました\n\n解析中です...少々お待ちください\n（解析には5-10秒ほどかかります）");
     ctx.waitUntil(
@@ -1701,12 +1726,22 @@ ${imageResult.error}`);
     // 画像解析モードを有効化（60秒間有効）
     if (this.messageHandler) {
       const timestamp = Date.now();
-      this.messageHandler.lastMentionTime.set(groupId, timestamp);
-      console.log("[INFO] Image analysis mode activated for group:", groupId);
-      console.log("[INFO] Timestamp set:", timestamp);
-      console.log("[INFO] Verification - stored timestamp:", this.messageHandler.lastMentionTime.get(groupId));
       
-      // デバッグ: グループIDを返信メッセージに含める
+      // KVに保存（複数インスタンス対応）
+      if (this.messageHandler.kv) {
+        const kvKey = `image_analysis_mode:${groupId}`;
+        await this.messageHandler.kv.put(kvKey, timestamp.toString(), { expirationTtl: 60 });
+        console.log("[INFO] Image analysis mode saved to KV - Key:", kvKey, "Timestamp:", timestamp);
+        
+        // 検証: KVから読み取り
+        const verification = await this.messageHandler.kv.get(kvKey);
+        console.log("[INFO] Verification - KV value:", verification);
+      } else {
+        // フォールバック: メモリに保存
+        this.messageHandler.lastMentionTime.set(groupId, timestamp);
+        console.log("[INFO] Image analysis mode saved to memory - Timestamp:", timestamp);
+      }
+      
       await this.lineAPI.replyMessage(
         replyToken,
         "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。\n\n[DEBUG] GroupID: " + groupId.substring(0, 10) + "..."
@@ -2269,7 +2304,7 @@ async function handleLineWebhook(request, env, ctx) {
   const playerManager = new PlayerManager(scoreCalculator, sheetsClient, config);
   const seasonManager = new SeasonManager(sheetsClient, config);
   const imageAnalyzer = new ImageAnalyzer(config);
-  const messageHandler = new MessageHandler(lineAPI, imageAnalyzer);
+  const messageHandler = new MessageHandler(lineAPI, imageAnalyzer, env.IMAGES);
   const rankingImageGenerator = env.IMAGES ? new RankingImageGenerator(config, env, env.IMAGES) : null;
   const commandRouter = new CommandRouter(
     config,
