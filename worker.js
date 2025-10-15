@@ -481,8 +481,15 @@ var PlayerManager = class {
           players.length
         );
         data.totalScore += gameScore;
-        data.totalRawScore += player.score;
-        data.rawScores.push(player.score);
+        
+        // 点数を数値に変換
+        const numericScore = typeof player.score === 'number' ? player.score : parseInt(player.score, 10);
+        if (!isNaN(numericScore)) {
+          data.totalRawScore += numericScore;
+          data.rawScores.push(numericScore);
+        } else {
+          console.warn("[WARN] Invalid score for player:", player.name, "Score:", player.score);
+        }
       });
     });
     const stats = [];
