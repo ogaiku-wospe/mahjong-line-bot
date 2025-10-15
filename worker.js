@@ -754,10 +754,68 @@ __name(SeasonManager, "SeasonManager");
 
 // src/image-analyzer.js
 var ImageAnalyzer = class {
-  constructor(config) {
+  constructor(config, sheetsClient = null) {
+    this.config = config;
+    this.sheetsClient = sheetsClient;
     this.geminiKey = config.GEMINI_API_KEY;
     this.visionKey = config.VISION_API_KEY;
     this.lineAccessToken = config.LINE_CHANNEL_ACCESS_TOKEN;
+  }
+  // レーベンシュタイン距離を計算（文字列の類似度判定）
+  levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + 1
+          );
+        }
+      }
+    }
+    return dp[m][n];
+  }
+  // 登録済みプレイヤー名から最も類似した名前を探す
+  async correctPlayerName(recognizedName) {
+    if (!this.sheetsClient) {
+      return recognizedName;
+    }
+    try {
+      const players = await this.config.getPlayers(this.sheetsClient);
+      if (!players || players.length === 0) {
+        return recognizedName;
+      }
+      const registeredNames = players.map(p => p.playerName);
+      let bestMatch = recognizedName;
+      let minDistance = Infinity;
+      for (const registeredName of registeredNames) {
+        const distance = this.levenshteinDistance(
+          recognizedName.toLowerCase(),
+          registeredName.toLowerCase()
+        );
+        const maxLen = Math.max(recognizedName.length, registeredName.length);
+        const similarity = 1 - distance / maxLen;
+        if (distance < minDistance && similarity >= 0.5) {
+          minDistance = distance;
+          bestMatch = registeredName;
+        }
+      }
+      if (bestMatch !== recognizedName) {
+        console.log(`[INFO] Name corrected: "${recognizedName}" -> "${bestMatch}" (distance: ${minDistance})`);
+      }
+      return bestMatch;
+    } catch (error) {
+      console.error("[ERROR] Player name correction failed:", error);
+      return recognizedName;
+    }
   }
   async analyzeImage(messageId) {
     try {
@@ -778,12 +836,13 @@ var ImageAnalyzer = class {
       if (result.success && result.players && result.players.length >= 3) {
         const players = [];
         const scores = [];
-        result.players.forEach((p) => {
+        for (const p of result.players) {
           if (p.nickname) {
-            players.push(p.nickname);
+            const correctedName = await this.correctPlayerName(p.nickname);
+            players.push(correctedName);
             scores.push(p.score || 25e3);
           }
-        });
+        }
         console.log("[INFO] Successfully parsed - Players:", players.join(", "));
         console.log("[INFO] Successfully parsed - Scores:", scores.join(", "));
         return {
@@ -2328,7 +2387,7 @@ async function handleLineWebhook(request, env, ctx) {
   const spreadsheetManager = new SpreadsheetManager(sheetsClient, config);
   const playerManager = new PlayerManager(scoreCalculator, sheetsClient, config);
   const seasonManager = new SeasonManager(sheetsClient, config);
-  const imageAnalyzer = new ImageAnalyzer(config);
+  const imageAnalyzer = new ImageAnalyzer(config, sheetsClient);
   const messageHandler = new MessageHandler(lineAPI, imageAnalyzer, env.IMAGES);
   const rankingImageGenerator = env.IMAGES ? new RankingImageGenerator(config, env, env.IMAGES) : null;
   const commandRouter = new CommandRouter(
