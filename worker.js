@@ -1907,6 +1907,93 @@ ${error.toString()}
             } else {
               await this.lineAPI.pushMessage(groupId, `■ 記録の追加に失敗しました\n\n${result.error}`);
             }
+          } else if (suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)) {
+            // 統計テキスト表示
+            const playerName = suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)[2].trim();
+            const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+            
+            if (!seasonKey) {
+              await this.lineAPI.pushMessage(groupId, "シーズンが設定されていません。");
+              return;
+            }
+            
+            if (!playerName) {
+              await this.lineAPI.pushMessage(groupId, "プレイヤー名を指定してください。\n例: @麻雀点数管理bot st 山田");
+              return;
+            }
+            
+            const records = await this.spreadsheetManager.getAllRecords(seasonKey);
+            const stats = this.playerManager.calculateStatistics(records);
+            const playerStats = stats.find((s) => s.name === playerName);
+            
+            if (!playerStats) {
+              await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。`);
+              return;
+            }
+            
+            let message = `【${playerName}さんの統計】\n\n`;
+            message += `対戦数: ${playerStats.gamesPlayed}回\n`;
+            message += `合計: ${playerStats.totalScore >= 0 ? '+' : ''}${playerStats.totalScore.toFixed(1)}pt\n`;
+            message += `平均: ${playerStats.averageScore >= 0 ? '+' : ''}${playerStats.averageScore.toFixed(1)}pt\n`;
+            message += `平均順位: ${playerStats.averageRank.toFixed(2)}位\n\n`;
+            message += `【順位分布】\n`;
+            message += `1位: ${playerStats.firstCount}回 (${playerStats.firstRate.toFixed(1)}%)\n`;
+            message += `2位: ${playerStats.secondCount}回 (${playerStats.secondRate.toFixed(1)}%)\n`;
+            message += `3位: ${playerStats.thirdCount}回 (${playerStats.thirdRate.toFixed(1)}%)\n`;
+            message += `4位: ${playerStats.fourthCount}回 (${playerStats.fourthRate.toFixed(1)}%)`;
+            
+            await this.lineAPI.pushMessage(groupId, message);
+          } else if (suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)) {
+            // 統計画像生成
+            const playerName = suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)[2].trim();
+            const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+            
+            if (!seasonKey) {
+              await this.lineAPI.pushMessage(groupId, "シーズンが設定されていません。");
+              return;
+            }
+            
+            if (!playerName) {
+              await this.lineAPI.pushMessage(groupId, "プレイヤー名を指定してください。\n例: @麻雀点数管理bot stimg 山田");
+              return;
+            }
+            
+            const records = await this.spreadsheetManager.getAllRecords(seasonKey);
+            const stats = this.playerManager.calculateStatistics(records);
+            const playerStats = stats.find((s) => s.name === playerName);
+            
+            if (!playerStats) {
+              await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。`);
+              return;
+            }
+            
+            if (!this.statsImageGenerator) {
+              await this.lineAPI.pushMessage(groupId, "統計画像生成機能が利用できません。");
+              return;
+            }
+            
+            console.log('[INFO] Generating stats image for:', playerName);
+            await this.lineAPI.pushMessage(groupId, `${playerName}さんの統計画像を生成中...`);
+            
+            try {
+              const result = await this.statsImageGenerator.generateStatsImage(
+                playerStats,
+                playerName,
+                records,
+                seasonKey
+              );
+              
+              if (result.success) {
+                console.log('[INFO] Stats image generated successfully');
+                await this.lineAPI.pushImage(groupId, result.imageUrl);
+              } else {
+                console.error('[ERROR] Stats image generation failed:', result.error);
+                await this.lineAPI.pushMessage(groupId, `画像生成に失敗しました: ${result.error}`);
+              }
+            } catch (error) {
+              console.error('[ERROR] Exception during stats image generation:', error);
+              await this.lineAPI.pushMessage(groupId, `画像生成中にエラーが発生しました: ${error.message}`);
+            }
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
