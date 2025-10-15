@@ -3906,8 +3906,8 @@ var StatsImageGenerator = class {
           },
           datalabels: {
             anchor: 'end',
-            align: 'end',
-            offset: 8,
+            align: 'start',
+            offset: -5,
             color: '#495057',
             font: {
               size: 18,
@@ -3923,6 +3923,7 @@ var StatsImageGenerator = class {
         scales: {
           y: {
             beginAtZero: true,
+            suggestedMax: ${Math.max(...rankData) + 2},
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
             },
