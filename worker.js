@@ -1,6 +1,24 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
+// ========== 日本時間ヘルパー関数 ==========
+function getJSTDate() {
+  const now = new Date();
+  // UTC時刻に9時間追加して日本時間に変換
+  return new Date(now.getTime() + (9 * 60 * 60 * 1000));
+}
+
+function formatJSTDateTime(date) {
+  const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  const year = jstDate.getUTCFullYear();
+  const month = String(jstDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(jstDate.getUTCDate()).padStart(2, '0');
+  const hours = String(jstDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(jstDate.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(jstDate.getUTCSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 // src/config.js
 var Config = class {
   constructor(env) {
@@ -574,7 +592,7 @@ var PlayerManager = class {
         throw new Error("Player not found");
       }
       const actualRowIndex = rowIndex + 2;
-      const now = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+      const now = formatJSTDateTime(new Date());
       const updatedRow = [...rows[rowIndex]];
       updatedRow[lineUserIdIdx] = lineUserId;
       updatedRow[lineDisplayNameIdx] = lineDisplayName;
@@ -615,7 +633,7 @@ var PlayerManager = class {
           return result;
         }
       }
-      const now = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+      const now = formatJSTDateTime(new Date());
       const existingUserId = players.length > 0 && players[0] ? (await this.sheets.getValues("player_master!A2:A2", this.config.CONFIG_SHEET_ID))[0]?.[0] : this.config.userId;
       const values = [[
         existingUserId || this.config.userId,
@@ -662,9 +680,9 @@ var SeasonManager = class {
   }
   async createSeason(groupId, seasonName) {
     try {
-      const now = /* @__PURE__ */ new Date();
-      // シーズンキーを「シーズン名_yyyymmdd」形式で生成
-      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      const now = getJSTDate();
+      // シーズンキーを「シーズン名_yyyymmdd」形式で生成（日本時間）
+      const dateStr = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}${String(now.getUTCDate()).padStart(2, "0")}`;
       // Google Sheetsで使えない文字をサニタイズ（/, \, ?, *, [, ], :などを削除）
       const sanitizedSeasonName = seasonName.replace(/[\/\\?*\[\]:]/g, '_');
       let seasonKey = `${sanitizedSeasonName}_${dateStr}`;
@@ -675,15 +693,15 @@ var SeasonManager = class {
         ? allSeasonsData.slice(1).map(row => row[1]).filter(Boolean) 
         : [];
       
-      // 重複チェック - 同じキーが存在する場合は時刻を追加
+      // 重複チェック - 同じキーが存在する場合は時刻を追加（日本時間）
       if (existingKeys.includes(seasonKey)) {
-        const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+        const timeStr = `${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}`;
         seasonKey = `${sanitizedSeasonName}_${dateStr}_${timeStr}`;
       }
       
       const existingSeasons = await this.sheets.getValues("season!A:A", this.config.CONFIG_SHEET_ID);
       const existingUserId = existingSeasons && existingSeasons.length > 1 ? existingSeasons[1][0] : this.config.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-      const timestamp = now.toISOString().slice(0, 19).replace("T", " ");
+      const timestamp = formatJSTDateTime(new Date());
       
       // 既存の全シーズンのis_currentをFALSEに更新
       if (allSeasonsData && allSeasonsData.length > 1) {
@@ -792,7 +810,7 @@ var SeasonManager = class {
         }
       }
       const existingUserId = data.length > 1 && data[1][0] ? data[1][0] : this.config.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-      const now = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+      const now = formatJSTDateTime(new Date());
       const values = [[
         existingUserId,
         // A列: user_id（既存のものを使用）
@@ -2864,7 +2882,7 @@ var RankingImageGenerator = class {
         metadata: {
           contentType,
           method: conversionResult.method,
-          createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          createdAt: formatJSTDateTime(new Date())
         }
       });
       const publicUrl = `https://mahjong-line-bot.ogaiku.workers.dev/images/${imageKey}`;
