@@ -638,7 +638,9 @@ var SeasonManager = class {
       const now = /* @__PURE__ */ new Date();
       // シーズンキーを「シーズン名_yyyymmdd」形式で生成
       const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-      let seasonKey = `${seasonName}_${dateStr}`;
+      // Google Sheetsで使えない文字をサニタイズ（/, \, ?, *, [, ], :などを削除）
+      const sanitizedSeasonName = seasonName.replace(/[\/\\?*\[\]:]/g, '_');
+      let seasonKey = `${sanitizedSeasonName}_${dateStr}`;
       
       // 既存のシーズンキーをチェック
       const allSeasonsData = await this.sheets.getValues("season!A:H", this.config.CONFIG_SHEET_ID);
@@ -649,7 +651,7 @@ var SeasonManager = class {
       // 重複チェック - 同じキーが存在する場合は時刻を追加
       if (existingKeys.includes(seasonKey)) {
         const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-        seasonKey = `${seasonName}_${dateStr}_${timeStr}`;
+        seasonKey = `${sanitizedSeasonName}_${dateStr}_${timeStr}`;
       }
       
       const existingSeasons = await this.sheets.getValues("season!A:A", this.config.CONFIG_SHEET_ID);
