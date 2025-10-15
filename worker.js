@@ -3392,6 +3392,23 @@ var StatsImageGenerator = class {
     }
   }
 
+  // ランダムグラデーション生成
+  getRandomGradient() {
+    const gradients = [
+      '#667eea 0%, #764ba2 100%',
+      '#f093fb 0%, #f5576c 100%',
+      '#4facfe 0%, #00f2fe 100%',
+      '#43e97b 0%, #38f9d7 100%',
+      '#fa709a 0%, #fee140 100%',
+      '#30cfd0 0%, #330867 100%',
+      '#a8edea 0%, #fed6e3 100%',
+      '#ff9a9e 0%, #fecfef 100%',
+      '#ffecd2 0%, #fcb69f 100%',
+      '#ff6e7f 0%, #bfe9ff 100%'
+    ];
+    return gradients[Math.floor(Math.random() * gradients.length)];
+  }
+
   // HTMLテンプレート生成
   generateStatsHTML(playerStats, playerName, records, seasonKey) {
     // プレイヤーの記録のみをフィルタリング
@@ -3405,21 +3422,49 @@ var StatsImageGenerator = class {
       return players.includes(playerName);
     });
 
-    // 時系列データを作成（累積スコア）
+    // 時系列データを作成（合計スコア推移）
     let cumulativeScore = 0;
     const timeSeriesData = playerRecords.map((record, index) => {
-      // プレイヤーの点数を取得
-      let playerScore = 0;
+      // プレイヤーの点数と順位を取得
+      let playerRawScore = 0;
+      let playerRank = 0;
+      const gameType = record['対戦種別'] || '四麻半荘';
+      const playerCount = gameType.includes('三麻') ? 3 : 4;
+      
+      // プレイヤーの素点を取得
       for (let i = 1; i <= 4; i++) {
         if (record[`プレイヤー${i}名`] === playerName) {
-          playerScore = parseInt(record[`プレイヤー${i}点数`]) || 0;
+          playerRawScore = parseInt(record[`プレイヤー${i}点数`]) || 0;
           break;
         }
       }
       
-      // 持ち点からの差分を計算（25000点スタート）
-      const scoreDiff = playerScore - 25000;
-      cumulativeScore += scoreDiff;
+      // 順位を計算（素点から）
+      const allScores = [];
+      for (let i = 1; i <= playerCount; i++) {
+        const score = parseInt(record[`プレイヤー${i}点数`]) || 0;
+        allScores.push(score);
+      }
+      allScores.sort((a, b) => b - a);
+      playerRank = allScores.indexOf(playerRawScore) + 1;
+      
+      // ゲームスコア（pt）を計算
+      const baseScore = gameType.includes('三麻') ? 35000 : 25000;
+      const scoreDiff = playerRawScore - baseScore;
+      let gameScore = scoreDiff / 1000;
+      
+      // ウマとオカを加算
+      if (playerCount === 4) {
+        const uma = [20, 10, -10, -20];
+        gameScore += uma[playerRank - 1];
+        gameScore += 10; // オカ
+      } else {
+        const uma = [30, 0, -30];
+        gameScore += uma[playerRank - 1];
+        gameScore += 10; // オカ
+      }
+      
+      cumulativeScore += gameScore;
       
       return {
         gameNumber: index + 1,
@@ -3456,7 +3501,7 @@ var StatsImageGenerator = class {
     }
     body {
       font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, ${this.getRandomGradient()});
       padding: 40px;
       width: 1200px;
       min-height: 1400px;
@@ -3468,7 +3513,7 @@ var StatsImageGenerator = class {
       overflow: hidden;
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, ${this.getRandomGradient()});
       color: white;
       padding: 40px;
       text-align: center;
@@ -3500,7 +3545,7 @@ var StatsImageGenerator = class {
       font-size: 22px;
       margin-bottom: 20px;
       padding-bottom: 12px;
-      border-bottom: 3px solid #667eea;
+      border-bottom: 3px solid #6c757d;
     }
     .stat-row {
       display: flex;
@@ -3552,14 +3597,14 @@ var StatsImageGenerator = class {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 ${playerName}さんの統計</h1>
+      <h1>${playerName}さんの統計</h1>
       <div class="season-info">シーズン: ${seasonKey}</div>
     </div>
     
     <div class="stats-grid">
       <!-- 総合成績 -->
       <div class="stat-card">
-        <h2>📈 総合成績</h2>
+        <h2>総合成績</h2>
         <div class="stat-row">
           <span class="stat-row-label">総対戦数</span>
           <span class="stat-row-value">${playerStats.totalGames}戦</span>
@@ -3584,7 +3629,7 @@ var StatsImageGenerator = class {
 
       <!-- 順位分布 -->
       <div class="stat-card">
-        <h2>🏆 順位分布</h2>
+        <h2>順位分布</h2>
         ${[1, 2, 3, 4].map(rank => {
           const count = playerStats.rankDist[rank] || 0;
           const rate = playerStats.totalGames > 0 ? (count / playerStats.totalGames * 100).toFixed(1) : 0;
@@ -3599,7 +3644,7 @@ var StatsImageGenerator = class {
 
       <!-- 点数統計 -->
       <div class="stat-card">
-        <h2>💰 点数統計</h2>
+        <h2>点数統計</h2>
         <div class="stat-row">
           <span class="stat-row-label">最高点棒</span>
           <span class="stat-row-value positive">${playerStats.maxScore.toLocaleString()}点</span>
@@ -3616,7 +3661,7 @@ var StatsImageGenerator = class {
 
       <!-- 勝率統計 -->
       <div class="stat-card">
-        <h2>🎲 勝率統計</h2>
+        <h2>勝率統計</h2>
         <div class="stat-row">
           <span class="stat-row-label">トップ率</span>
           <span class="stat-row-value positive">
@@ -3635,15 +3680,11 @@ var StatsImageGenerator = class {
             ${playerStats.totalGames > 0 ? ((playerStats.totalGames - (playerStats.rankDist[4] || 0)) / playerStats.totalGames * 100).toFixed(1) : '0.0'}%
           </span>
         </div>
-        <div class="stat-row">
-          <span class="stat-row-label">平均着順</span>
-          <span class="stat-row-value">${playerStats.avgRank.toFixed(2)}位</span>
-        </div>
       </div>
 
       <!-- スコア推移グラフ -->
       <div class="chart-container">
-        <h2>📉 累積ポイント推移</h2>
+        <h2>合計スコア推移</h2>
         <div class="chart-wrapper">
           <canvas id="lineChart"></canvas>
         </div>
@@ -3651,7 +3692,7 @@ var StatsImageGenerator = class {
 
       <!-- 順位分布グラフ -->
       <div class="chart-container">
-        <h2>🎯 順位分布グラフ</h2>
+        <h2>順位分布グラフ</h2>
         <div class="chart-wrapper">
           <canvas id="barChart"></canvas>
         </div>
@@ -3675,7 +3716,7 @@ var StatsImageGenerator = class {
       data: {
         labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.gameNumber}戦`))},
         datasets: [{
-          label: '累積ポイント',
+          label: '合計スコア',
           data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
           borderColor: 'rgb(102, 126, 234)',
           backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -3708,7 +3749,7 @@ var StatsImageGenerator = class {
             bodyFont: { size: 14 },
             callbacks: {
               label: function(context) {
-                return '累積ポイント: ' + context.parsed.y.toFixed(1) + 'pt';
+                return '合計スコア: ' + context.parsed.y.toFixed(1) + 'pt';
               }
             }
           }
