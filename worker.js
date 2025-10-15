@@ -3530,7 +3530,8 @@ var StatsImageGenerator = class {
     }
     .chart-wrapper {
       position: relative;
-      height: 380px;
+      height: 420px;
+      padding-top: 20px;
     }
     .positive {
       color: #28a745;
@@ -3609,13 +3610,13 @@ var StatsImageGenerator = class {
         </div>
         <div class="stat-row">
           <span class="stat-row-label">平均点棒</span>
-          <span class="stat-row-value">${playerStats.avgRawScore.toFixed(0)}点</span>
+          <span class="stat-row-value">${Math.round(playerStats.avgRawScore).toLocaleString()}点</span>
         </div>
       </div>
 
       <!-- スコア推移グラフ -->
       <div class="chart-container">
-        <h2>📉 累積スコア推移</h2>
+        <h2>📉 累積ポイント推移</h2>
         <div class="chart-wrapper">
           <canvas id="lineChart"></canvas>
         </div>
@@ -3647,7 +3648,7 @@ var StatsImageGenerator = class {
       data: {
         labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.gameNumber}戦`))},
         datasets: [{
-          label: '累積スコア',
+          label: '累積ポイント',
           data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
           borderColor: 'rgb(102, 126, 234)',
           backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -3680,7 +3681,7 @@ var StatsImageGenerator = class {
             bodyFont: { size: 14 },
             callbacks: {
               label: function(context) {
-                return '累積: ' + context.parsed.y.toFixed(1) + 'pt';
+                return '累積ポイント: ' + context.parsed.y.toFixed(1) + 'pt';
               }
             }
           }
