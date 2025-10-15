@@ -629,10 +629,27 @@ var SeasonManager = class {
   async createSeason(groupId, seasonName) {
     try {
       const now = /* @__PURE__ */ new Date();
-      const seasonKey = `season_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      // シーズンキーを「シーズン名_yyyymmdd」形式で生成
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      const seasonKey = `${seasonName}_${dateStr}`;
+      
       const existingSeasons = await this.sheets.getValues("season!A:A", this.config.CONFIG_SHEET_ID);
       const existingUserId = existingSeasons && existingSeasons.length > 1 ? existingSeasons[1][0] : this.config.GOOGLE_SERVICE_ACCOUNT_EMAIL;
       const timestamp = now.toISOString().slice(0, 19).replace("T", " ");
+      
+      // 既存の全シーズンのis_currentをFALSEに更新
+      const allSeasonsData = await this.sheets.getValues("season!A:H", this.config.CONFIG_SHEET_ID);
+      if (allSeasonsData && allSeasonsData.length > 1) {
+        for (let i = 1; i < allSeasonsData.length; i++) {
+          const rowNumber = i + 1;
+          await this.sheets.updateValues(
+            `season!F${rowNumber}`,
+            [["FALSE"]],
+            this.config.CONFIG_SHEET_ID
+          );
+        }
+      }
+      
       const values = [[
         existingUserId,
         // A列: user_id（既存のものを使用）
@@ -2057,8 +2074,13 @@ ${imageResult.error}`);
     if (result.success) {
       await this.lineAPI.replyMessage(
         replyToken,
-        `\u30B7\u30FC\u30BA\u30F3\u300C${seasonName}\u300D\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002
-\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC: ${result.seasonKey}`
+        `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F
+
+\u30B7\u30FC\u30BA\u30F3\u540D: ${seasonName}
+\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC: ${result.seasonKey}
+
+\u2705 \u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002
+\uFF08\u4ED6\u306E\u30B7\u30FC\u30BA\u30F3\u306F\u81EA\u52D5\u7684\u306B\u975E\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\uFF09`
       );
     } else {
       await this.lineAPI.replyMessage(replyToken, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F
