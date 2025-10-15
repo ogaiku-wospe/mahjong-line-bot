@@ -1750,15 +1750,54 @@ ${error.toString()}
               await this.lineAPI.pushMessage(groupId, message);
             }
           } else if (suggestedCommand.match(/^(プレイヤー一覧|pl|players)$/)) {
-            await this.handlePlayerList(groupId, null);
+            // handlePlayerListはreplyTokenが必須なので、結果を取得してpushMessageで送信
+            const players = await this.seasonManager.getAllPlayers();
+            if (players.length === 0) {
+              await this.lineAPI.pushMessage(groupId, "\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u767B\u9332\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002");
+            } else {
+              let message = `\u3010\u767B\u9332\u30D7\u30EC\u30A4\u30E4\u30FC\u4E00\u89A7\u3011(${players.length}\u540D)\n\n`;
+              players.forEach((player, index) => {
+                message += `${index + 1}. ${player}\n`;
+              });
+              await this.lineAPI.pushMessage(groupId, message);
+            }
           } else if (suggestedCommand.match(/^(取消|取り消し|undo|u)$/)) {
-            await this.handleUndo(groupId, null);
+            // handleUndoはreplyTokenが必須なので、結果を取得してpushMessageで送信
+            const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+            if (!seasonKey) {
+              await this.lineAPI.pushMessage(groupId, "\u30B7\u30FC\u30BA\u30F3\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002");
+            } else {
+              const result = await this.spreadsheetManager.deleteLastRecord(seasonKey);
+              if (result.success) {
+                await this.lineAPI.pushMessage(
+                  groupId,
+                  `\u25A0 \u76F4\u524D\u306E\u8A18\u9332\u3092\u524A\u9664\u3057\u307E\u3057\u305F\n\n\u524A\u9664\u5185\u5BB9:\n${result.deletedRecord}`
+                );
+              } else {
+                await this.lineAPI.pushMessage(groupId, `\u25A0 \u524A\u9664\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
+              }
+            }
           } else if (this.matchHelp(suggestedCommand)) {
             // ヘルプはreplyToken必須なので、内容を取得してpushMessageで送信
             const helpText = "\u3010\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B3\u30DE\u30F3\u30C9\u4E00\u89A7\u3011\n\n\u25A0 \u8A18\u9332\u7BA1\u7406\n\u3010\u624B\u52D5\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r \u5C71\u7530 32000 \u9234\u6728 28000 \u4F50\u85E4 24000 \u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  \u5C71\u7530 32000\n  \u9234\u6728 28000\n  \u4F50\u85E4 24000\n  \u7530\u4E2D 16000\n\n\u3010\u30E1\u30F3\u30B7\u30E7\u30F3\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u5C71\u7530 32000 @\u9234\u6728 28000 @\u4F50\u85E4 24000 @\u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  @\u5C71\u7530 32000\n  @\u9234\u6728 28000\n  @\u4F50\u85E4 24000\n  @\u7530\u4E2D 16000\n\n\u3010\u753B\u50CF\u89E3\u6790\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\u89E3\u6790\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot img\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u89E3\u6790\n  1. \u30B3\u30DE\u30F3\u30C9\u3092\u5B9F\u884C\n  2. 60\u79D2\u4EE5\u5185\u306B\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9001\u4FE1\n  3. \u89E3\u6790\u7D50\u679C\u306E\u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3057\u3066\u8A18\u9332\n\n\u3010\u53D6\u308A\u6D88\u3057\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u53D6\u6D88\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u\n  \u76F4\u524D\u306E\u8A18\u9332\u3092\u524A\u9664\n\n\u25A0 \u7D71\u8A08\u8868\u793A\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n  \u5168\u4F53\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u8868\u793A\uFF08\u30C6\u30AD\u30B9\u30C8\u5F62\u5F0F\uFF09\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\u753B\u50CF\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rankimg\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot ri\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\n  \u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u753B\u50CF\u3092\u751F\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u7D71\u8A08 [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st \u5C71\u7530\n  \u500B\u4EBA\u306E\u8A73\u7D30\u7D71\u8A08\u3092\u8868\u793A\n\n\u25A0 \u30B7\u30FC\u30BA\u30F3\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc [\u540D\u524D]\n  \u65B0\u3057\u3044\u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u5207\u66FF [\u30AD\u30FC]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw [\u30AD\u30FC]\n  \u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sl\n  \u5168\u30B7\u30FC\u30BA\u30F3\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D7\u30EC\u30A4\u30E4\u30FC\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr [\u540D\u524D]\n  \u30D7\u30EC\u30A4\u30E4\u30FC\u3092\u767B\u9332\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u5C71\u7530 SHIROKUMA3\n  LINE\u30A2\u30AB\u30A6\u30F3\u30C8\u3068\u96C0\u9B42\u540D\u3092\u7D10\u4ED8\u3051\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pl\n  \u767B\u9332\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n  \u3053\u306E\u30D8\u30EB\u30D7\u3092\u8868\u793A";
             await this.lineAPI.pushMessage(groupId, helpText);
           } else if (suggestedCommand.match(/^(画像解析|img|image|解析)$/)) {
-            await this.handleImageAnalysisRequest(groupId, null);
+            // handleImageAnalysisRequestはreplyTokenが必須なので、直接処理
+            if (this.messageHandler) {
+              const timestamp = Date.now();
+              if (this.messageHandler.kv) {
+                const kvKey = `image_analysis_mode:${groupId}`;
+                await this.messageHandler.kv.put(kvKey, timestamp.toString(), { expirationTtl: 60 });
+              } else {
+                this.messageHandler.lastMentionTime.set(groupId, timestamp);
+              }
+              await this.lineAPI.pushMessage(
+                groupId,
+                "■ 画像解析モード\n\n60秒以内に雀魂のスクリーンショットを送信してください。\n解析結果が表示され、ボタンをタップすると記録できます。"
+              );
+            } else {
+              await this.lineAPI.pushMessage(groupId, "■ エラー\n\n画像解析機能が利用できません。管理者に連絡してください。");
+            }
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
