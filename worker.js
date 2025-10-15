@@ -1632,10 +1632,16 @@ var CommandRouter = class {
         await this.handleImageAnalysisRequest(groupId, replyToken);
         return;
       }
+      const statsImageMatch = command.match(/^(統計画像|stimg|statsimg)\s*(.*)$/);
+      if (statsImageMatch) {
+        const playerName = statsImageMatch[2].trim();
+        await this.handleStatsImage(groupId, playerName, replyToken);
+        return;
+      }
       const statsMatch = command.match(/^(統計|st|stats)\s*(.*)$/);
       if (statsMatch) {
         const playerName = statsMatch[2].trim();
-        await this.handleStats(groupId, playerName, replyToken);
+        await this.handleStatsText(groupId, playerName, replyToken);
         return;
       }
       const seasonCreateMatch = command.match(/^(シーズン作成|sc|season create)\s+(.+)$/);
@@ -2347,16 +2353,17 @@ ${imageResult.error}`);
       );
     }
   }
-  async handleStats(groupId, playerName, replyToken) {
+  // テキスト形式の統計表示
+  async handleStatsText(groupId, playerName, replyToken) {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
-      await this.lineAPI.replyMessage(replyToken, "\u30B7\u30FC\u30BA\u30F3\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002");
+      await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
       return;
     }
     if (!playerName) {
       await this.lineAPI.replyMessage(
         replyToken,
-        "\u30D7\u30EC\u30A4\u30E4\u30FC\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002\n\u4F8B: @\u9EBB\u96C0bot \u7D71\u8A08 \u5C71\u7530"
+        "プレイヤー名を指定してください。\n例: @麻雀bot 統計 山田"
       );
       return;
     }
@@ -2364,58 +2371,84 @@ ${imageResult.error}`);
     const stats = this.playerManager.calculateStatistics(records);
     const playerStats = stats.find((s) => s.name === playerName);
     if (!playerStats) {
-      await this.lineAPI.replyMessage(replyToken, `${playerName}\u3055\u3093\u306E\u8A18\u9332\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002`);
+      await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。`);
       return;
     }
     
-    // 統計画像生成機能が利用可能な場合は画像を送信
-    if (this.statsImageGenerator) {
-      console.log('[INFO] Generating stats image for:', playerName);
-      await this.lineAPI.replyMessage(replyToken, `${playerName}\u3055\u3093\u306E\u7D71\u8A08\u753B\u50CF\u3092\u751F\u6210\u4E2D...\u2728`);
+    const sign = playerStats.totalScore >= 0 ? "+" : "";
+    let rankDistText = "";
+    for (let rank = 1; rank <= 4; rank++) {
+      const count = playerStats.rankDist[rank] || 0;
+      if (count > 0) {
+        const rate = (count / playerStats.totalGames * 100).toFixed(1);
+        rankDistText += `${rank}位: ${count}回 (${rate}%)\n`;
+      }
+    }
+    const message = `【${playerName}さんの統計】
+
+■総合成績
+総対戦数: ${playerStats.totalGames}戦
+合計スコア: ${sign}${playerStats.totalScore.toFixed(1)}pt
+平均スコア: ${sign}${playerStats.avgScore.toFixed(2)}pt/戦
+平均順位: ${playerStats.avgRank.toFixed(2)}位
+
+■順位分布
+${rankDistText}
+■点数
+最高点棒: ${playerStats.maxScore.toLocaleString()}点
+最低点棒: ${playerStats.minScore.toLocaleString()}点
+平均点棒: ${playerStats.avgRawScore.toFixed(0)}点`;
+    await this.lineAPI.replyMessage(replyToken, message);
+  }
+
+  // 画像形式の統計表示
+  async handleStatsImage(groupId, playerName, replyToken) {
+    const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+    if (!seasonKey) {
+      await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
+      return;
+    }
+    if (!playerName) {
+      await this.lineAPI.replyMessage(
+        replyToken,
+        "プレイヤー名を指定してください。\n例: @麻雀bot 統計画像 山田"
+      );
+      return;
+    }
+    const records = await this.spreadsheetManager.getAllRecords(seasonKey);
+    const stats = this.playerManager.calculateStatistics(records);
+    const playerStats = stats.find((s) => s.name === playerName);
+    if (!playerStats) {
+      await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。`);
+      return;
+    }
+    
+    if (!this.statsImageGenerator) {
+      await this.lineAPI.replyMessage(replyToken, "統計画像生成機能が利用できません。");
+      return;
+    }
+
+    console.log('[INFO] Generating stats image for:', playerName);
+    await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計画像を生成中...`);
+    
+    try {
+      const result = await this.statsImageGenerator.generateStatsImage(
+        playerStats,
+        playerName,
+        records,
+        seasonKey
+      );
       
-      try {
-        const result = await this.statsImageGenerator.generateStatsImage(
-          playerStats,
-          playerName,
-          records,
-          seasonKey
-        );
-        
-        if (result.success) {
-          console.log('[INFO] Stats image generated successfully');
-          await this.lineAPI.pushImage(groupId, result.imageUrl);
-        } else {
-          console.error('[ERROR] Stats image generation failed:', result.error);
-          // 画像生成失敗時はテキストで統計を表示
-          const sign = playerStats.totalScore >= 0 ? "+" : "";
-          let rankDistText = "";
-          for (let rank = 1; rank <= 4; rank++) {
-            const count = playerStats.rankDist[rank] || 0;
-            if (count > 0) {
-              const rate = (count / playerStats.totalGames * 100).toFixed(1);
-              rankDistText += `${rank}\u4F4D: ${count}\u56DE (${rate}%)\n`;
-            }
-          }
-          const message = `\u3010${playerName}\u3055\u3093\u306E\u7D71\u8A08\u3011\n\n\u25A0\u7DCF\u5408\u6210\u7E3E\n\u7DCF\u5BFE\u6226\u6570: ${playerStats.totalGames}\u6226\n\u5408\u8A08\u30B9\u30B3\u30A2: ${sign}${playerStats.totalScore.toFixed(1)}pt\n\u5E73\u5747\u30B9\u30B3\u30A2: ${sign}${playerStats.avgScore.toFixed(2)}pt/\u6226\n\u5E73\u5747\u9806\u4F4D: ${playerStats.avgRank.toFixed(2)}\u4F4D\n\n\u25A0\u9806\u4F4D\u5206\u5E03\n${rankDistText}\n\u25A0\u70B9\u6570\n\u6700\u9AD8\u70B9\u68D2: ${playerStats.maxScore.toLocaleString()}\u70B9\n\u6700\u4F4E\u70B9\u68D2: ${playerStats.minScore.toLocaleString()}\u70B9\n\u5E73\u5747\u70B9\u68D2: ${playerStats.avgRawScore.toFixed(0)}\u70B9\n\n(\u753B\u50CF\u751F\u6210\u306B\u5931\u6557: ${result.error})`;
-          await this.lineAPI.pushMessage(groupId, message);
-        }
-      } catch (error) {
-        console.error('[ERROR] Exception during stats image generation:', error);
-        await this.lineAPI.pushMessage(groupId, `\u753B\u50CF\u751F\u6210\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F: ${error.message}`);
+      if (result.success) {
+        console.log('[INFO] Stats image generated successfully');
+        await this.lineAPI.pushImage(groupId, result.imageUrl);
+      } else {
+        console.error('[ERROR] Stats image generation failed:', result.error);
+        await this.lineAPI.pushMessage(groupId, `画像生成に失敗しました: ${result.error}`);
       }
-    } else {
-      // 統計画像生成機能が利用不可の場合はテキストで表示
-      const sign = playerStats.totalScore >= 0 ? "+" : "";
-      let rankDistText = "";
-      for (let rank = 1; rank <= 4; rank++) {
-        const count = playerStats.rankDist[rank] || 0;
-        if (count > 0) {
-          const rate = (count / playerStats.totalGames * 100).toFixed(1);
-          rankDistText += `${rank}\u4F4D: ${count}\u56DE (${rate}%)\n`;
-        }
-      }
-      const message = `\u3010${playerName}\u3055\u3093\u306E\u7D71\u8A08\u3011\n\n\u25A0\u7DCF\u5408\u6210\u7E3E\n\u7DCF\u5BFE\u6226\u6570: ${playerStats.totalGames}\u6226\n\u5408\u8A08\u30B9\u30B3\u30A2: ${sign}${playerStats.totalScore.toFixed(1)}pt\n\u5E73\u5747\u30B9\u30B3\u30A2: ${sign}${playerStats.avgScore.toFixed(2)}pt/\u6226\n\u5E73\u5747\u9806\u4F4D: ${playerStats.avgRank.toFixed(2)}\u4F4D\n\n\u25A0\u9806\u4F4D\u5206\u5E03\n${rankDistText}\n\u25A0\u70B9\u6570\n\u6700\u9AD8\u70B9\u68D2: ${playerStats.maxScore.toLocaleString()}\u70B9\n\u6700\u4F4E\u70B9\u68D2: ${playerStats.minScore.toLocaleString()}\u70B9\n\u5E73\u5747\u70B9\u68D2: ${playerStats.avgRawScore.toFixed(0)}\u70B9`;
-      await this.lineAPI.replyMessage(replyToken, message);
+    } catch (error) {
+      console.error('[ERROR] Exception during stats image generation:', error);
+      await this.lineAPI.pushMessage(groupId, `画像生成中にエラーが発生しました: ${error.message}`);
     }
   }
   async handleSeasonCreate(groupId, seasonName, replyToken, ctx = null) {
