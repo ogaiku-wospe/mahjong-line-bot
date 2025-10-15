@@ -1728,12 +1728,12 @@ ${error.toString()}
         if (seasons.length === 0) {
           message = "\u25A0 \u5229\u7528\u53EF\u80FD\u306A\u30B7\u30FC\u30BA\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\n\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc [\u540D\u524D]\u300D\u3067\u4F5C\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
         } else {
-          message = "\u25A0 \u30B7\u30FC\u30BA\u30F3\u5207\u66FF\n\n\u4EE5\u4E0B\u306E\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n";
+          message = "\u25A0 \u30B7\u30FC\u30BA\u30F3\u5207\u66FF\n\n\u4EE5\u4E0B\u306E\u30B7\u30FC\u30BA\u30F3\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\uFF1A\n\n";
           seasons.forEach((season) => {
             const current = season.key === currentSeason ? " (\u73FE\u5728)" : "";
-            message += `${season.name} [${season.key}]${current}\n`;
+            message += `\u30FB ${season.name}${current}\n`;
           });
-          message += "\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw " + seasons[0].key;
+          message += "\n\u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw " + seasons[0].name;
         }
       } else if (commandType === "sl") {
         await this.handleSeasonList(groupId, replyToken);
@@ -2302,9 +2302,8 @@ ${imageResult.error}`);
             `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F
 
 \u30B7\u30FC\u30BA\u30F3\u540D: ${seasonName}
-\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC: ${result.seasonKey}
 
-\u2705 \u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002
+\u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002
 \uFF08\u4ED6\u306E\u30B7\u30FC\u30BA\u30F3\u306F\u81EA\u52D5\u7684\u306B\u975E\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\uFF09`
           );
         } else {
@@ -2328,22 +2327,35 @@ ${error.message}`);
       await processCreation();
     }
   }
-  async handleSeasonSwitch(groupId, seasonKey, replyToken, ctx = null) {
+  async handleSeasonSwitch(groupId, seasonKeyOrName, replyToken, ctx = null) {
     // 即座に確認メッセージを返す
     await this.lineAPI.replyMessage(replyToken, `\u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\u4E2D\u3067\u3059...`);
     
     // バックグラウンドでシーズン切り替え処理を実行
     const processSwitching = async () => {
       try {
-        await this.config.setCurrentSeason(groupId, seasonKey, this.sheets);
+        // シーズン名またはキーからシーズンを検索
+        const seasons = await this.seasonManager.getAllSeasons();
+        let targetSeason = seasons.find(s => s.key === seasonKeyOrName || s.name === seasonKeyOrName);
+        
+        if (!targetSeason) {
+          await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093
+
+\u6307\u5B9A\u3055\u308C\u305F\u30B7\u30FC\u30BA\u30F3: ${seasonKeyOrName}
+
+\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sl\u300D\u3067\u5229\u7528\u53EF\u80FD\u306A\u30B7\u30FC\u30BA\u30F3\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`);
+          return;
+        }
+        
+        await this.config.setCurrentSeason(groupId, targetSeason.key, this.sheets);
         await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\u307E\u3057\u305F
 
-\u73FE\u5728\u306E\u30B7\u30FC\u30BA\u30F3: ${seasonKey}
+\u73FE\u5728\u306E\u30B7\u30FC\u30BA\u30F3: ${targetSeason.name}
 
-\u2705 \u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002`);
+\u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002`);
       } catch (error) {
         console.error("[ERROR] Background season switch failed:", error);
-        await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u5207\u308A\u66FF\u3048\u306B\u5931\u6557\u3057\u307E\u3057\u305F
+        await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u5207\u308A\u66FF\u3048\u306B\u5931\u6089\u3057\u307E\u3057\u305F
 
 ${error.message}`);
       }
@@ -2369,10 +2381,9 @@ ${error.message}`);
     let message = "\u3010\u30B7\u30FC\u30BA\u30F3\u4E00\u89A7\u3011\n\n";
     seasons.forEach((season) => {
       const current = season.key === currentSeason ? " (\u73FE\u5728)" : "";
-      message += `${season.name} [${season.key}]${current}
-`;
+      message += `\u30FB ${season.name}${current}\n`;
     });
-    message += "\n\u5207\u308A\u66FF\u3048: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u5207\u66FF [\u30B7\u30FC\u30BA\u30F3\u30AD\u30FC]";
+    message += "\n\u5207\u308A\u66FF\u3048: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw [\u30B7\u30FC\u30BA\u30F3\u540D]";
     await this.lineAPI.replyMessage(replyToken, message);
   }
   async handlePlayerRegister(groupId, playerName, replyToken) {
