@@ -1565,7 +1565,7 @@ var CommandRouter = class {
       const seasonCreateMatch = command.match(/^(シーズン作成|sc|season create)\s+(.+)$/);
       if (seasonCreateMatch) {
         const seasonName = seasonCreateMatch[2].trim();
-        await this.handleSeasonCreate(groupId, seasonName, replyToken);
+        await this.handleSeasonCreate(groupId, seasonName, replyToken, ctx);
         return;
       }
       const seasonSwitchMatch = command.match(/^(シーズン切替|sw|season switch)\s+(.+)$/);
@@ -2069,23 +2069,44 @@ ${imageResult.error}`);
 \u5E73\u5747\u70B9\u68D2: ${playerStats.avgRawScore.toFixed(0)}\u70B9`;
     await this.lineAPI.replyMessage(replyToken, message);
   }
-  async handleSeasonCreate(groupId, seasonName, replyToken) {
-    const result = await this.seasonManager.createSeason(groupId, seasonName);
-    if (result.success) {
-      await this.lineAPI.replyMessage(
-        replyToken,
-        `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F
+  async handleSeasonCreate(groupId, seasonName, replyToken, ctx = null) {
+    // 即座に確認メッセージを返す
+    await this.lineAPI.replyMessage(replyToken, "\u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\u4E2D\u3067\u3059...");
+    
+    // バックグラウンドでシーズン作成処理を実行
+    const processCreation = async () => {
+      try {
+        const result = await this.seasonManager.createSeason(groupId, seasonName);
+        if (result.success) {
+          await this.lineAPI.pushMessage(
+            groupId,
+            `\u25A0 \u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F
 
 \u30B7\u30FC\u30BA\u30F3\u540D: ${seasonName}
 \u30B7\u30FC\u30BA\u30F3\u30AD\u30FC: ${result.seasonKey}
 
 \u2705 \u3053\u306E\u30B7\u30FC\u30BA\u30F3\u304C\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\u3002
 \uFF08\u4ED6\u306E\u30B7\u30FC\u30BA\u30F3\u306F\u81EA\u52D5\u7684\u306B\u975E\u30A2\u30AF\u30C6\u30A3\u30D6\u306B\u306A\u308A\u307E\u3057\u305F\uFF09`
-      );
-    } else {
-      await this.lineAPI.replyMessage(replyToken, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F
+          );
+        } else {
+          await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u306E\u4F5C\u6210\u306B\u5931\u6557\u3057\u307E\u3057\u305F
 
 ${result.error}`);
+        }
+      } catch (error) {
+        console.error("[ERROR] Background season creation failed:", error);
+        await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F
+
+${error.message}`);
+      }
+    };
+    
+    // ctx.waitUntilでバックグラウンド実行
+    if (ctx) {
+      ctx.waitUntil(processCreation());
+    } else {
+      // ctxがない場合は通常実行（開発環境用）
+      await processCreation();
     }
   }
   async handleSeasonSwitch(groupId, seasonKey, replyToken) {
