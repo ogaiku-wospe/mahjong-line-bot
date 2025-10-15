@@ -3661,8 +3661,8 @@ var StatsImageGenerator = class {
     }
     .chart-wrapper {
       position: relative;
-      height: 520px;
-      padding-top: 50px;
+      height: 550px;
+      padding-top: 60px;
       padding-bottom: 20px;
     }
     .positive {
@@ -3906,11 +3906,11 @@ var StatsImageGenerator = class {
           },
           datalabels: {
             anchor: 'end',
-            align: 'start',
-            offset: -5,
+            align: 'top',
+            offset: 4,
             color: '#495057',
             font: {
-              size: 18,
+              size: 17,
               weight: 'bold'
             },
             formatter: function(value, context) {
@@ -3923,7 +3923,7 @@ var StatsImageGenerator = class {
         scales: {
           y: {
             beginAtZero: true,
-            suggestedMax: ${Math.max(...rankData) + 2},
+            max: ${Math.max(...rankData) + 3},
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
             },
