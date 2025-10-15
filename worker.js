@@ -295,7 +295,14 @@ var GoogleSheetsClient = class {
       })
     });
     if (!response.ok) {
-      throw new Error(`Failed to create sheet: ${response.statusText}`);
+      const errorBody = await response.text();
+      console.error("[ERROR] createSheet failed:", {
+        sheetName,
+        status: response.status,
+        statusText: response.statusText,
+        errorBody
+      });
+      throw new Error(`Failed to create sheet: ${response.statusText} - ${errorBody}`);
     }
     return await response.json();
   }
@@ -631,14 +638,25 @@ var SeasonManager = class {
       const now = /* @__PURE__ */ new Date();
       // シーズンキーを「シーズン名_yyyymmdd」形式で生成
       const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-      const seasonKey = `${seasonName}_${dateStr}`;
+      let seasonKey = `${seasonName}_${dateStr}`;
+      
+      // 既存のシーズンキーをチェック
+      const allSeasonsData = await this.sheets.getValues("season!A:H", this.config.CONFIG_SHEET_ID);
+      const existingKeys = allSeasonsData && allSeasonsData.length > 1 
+        ? allSeasonsData.slice(1).map(row => row[1]).filter(Boolean) 
+        : [];
+      
+      // 重複チェック - 同じキーが存在する場合は時刻を追加
+      if (existingKeys.includes(seasonKey)) {
+        const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+        seasonKey = `${seasonName}_${dateStr}_${timeStr}`;
+      }
       
       const existingSeasons = await this.sheets.getValues("season!A:A", this.config.CONFIG_SHEET_ID);
       const existingUserId = existingSeasons && existingSeasons.length > 1 ? existingSeasons[1][0] : this.config.GOOGLE_SERVICE_ACCOUNT_EMAIL;
       const timestamp = now.toISOString().slice(0, 19).replace("T", " ");
       
       // 既存の全シーズンのis_currentをFALSEに更新
-      const allSeasonsData = await this.sheets.getValues("season!A:H", this.config.CONFIG_SHEET_ID);
       if (allSeasonsData && allSeasonsData.length > 1) {
         for (let i = 1; i < allSeasonsData.length; i++) {
           const rowNumber = i + 1;
@@ -669,7 +687,16 @@ var SeasonManager = class {
         // H列: updated_at
       ]];
       await this.sheets.appendValues("season!A:H", values, this.config.CONFIG_SHEET_ID);
-      await this.sheets.createSheet(seasonKey, this.config.RECORDS_SHEET_ID);
+      
+      // シートが既に存在するかチェック
+      const existingSheetId = await this.sheets.getSheetId(seasonKey, this.config.RECORDS_SHEET_ID);
+      if (!existingSheetId) {
+        // 存在しない場合のみ作成
+        await this.sheets.createSheet(seasonKey, this.config.RECORDS_SHEET_ID);
+      } else {
+        console.log(`[INFO] Sheet "${seasonKey}" already exists, skipping creation`);
+      }
+      
       const headers = [
         "\u5BFE\u6226\u65E5",
         "\u5BFE\u6226\u6642\u523B",
