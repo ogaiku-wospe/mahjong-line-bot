@@ -3970,30 +3970,29 @@ var StatsImageGenerator = class {
             html,
             viewport_width: 1200,
             viewport_height: 1400,
-            device_scale: 2
+            device_scale: 2,
+            ms_delay: 0
           })
         });
         
         console.log('[DEBUG] HCTI API response status:', response.status);
         
         if (response.ok) {
-          const data = await response.json();
+          console.log('[INFO] HCTI API response OK, parsing JSON...');
+          const text = await response.text();
+          console.log('[INFO] Response text length:', text.length);
+          const data = JSON.parse(text);
           console.log('[INFO] HCTI API returned URL:', data.url);
-          
-          const imageResponse = await fetch(data.url);
-          if (imageResponse.ok) {
-            const buffer = await imageResponse.arrayBuffer();
-            console.log('[INFO] HCTI conversion successful, size:', buffer.byteLength, 'bytes');
-            return { success: true, buffer, method: 'hcti' };
-          } else {
-            console.warn('[WARN] Failed to download image from HCTI:', imageResponse.status);
-          }
+          // 直接URLを返す（ダウンロードはスキップしてCPU時間を節約）
+          console.log('[INFO] HCTI conversion successful, returning URL directly');
+          return { success: true, url: data.url, method: 'hcti-url' };
         } else {
           const errorText = await response.text();
           console.warn('[WARN] HCTI API failed:', response.status, errorText);
         }
       } catch (error) {
         console.error('[ERROR] HCTI API exception:', error.message);
+        console.error('[ERROR] Error stack:', error.stack);
       }
     } else {
       console.warn('[WARN] HCTI API credentials not found, skipping...');
