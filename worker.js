@@ -1771,13 +1771,18 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       );
       return;
     }
-    const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
+    
+    // 即座に確認メッセージを送信
+    await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
+    
+    // バックグラウンドで記録処理を実行（タイムアウト回避）
+    const recordPromise = this.spreadsheetManager.addGameRecord(seasonKey, {
       gameType,
       players,
       scores,
       userId
-    });
-    if (result.success) {
+    }).then(async (result) => {
+      if (result.success) {
       let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
       message += `\u3010\u5BFE\u6226\u7D50\u679C\u3011 ${gameType}
 `;
@@ -1803,15 +1808,19 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
         message += `${r.rank}\u4F4D ${r.name}: ${r.score.toLocaleString()}\u70B9 (${sign}${r.gameScore.toFixed(1)}pt)
 `;
       });
-      await this.lineAPI.replyMessage(replyToken, message);
+      await this.lineAPI.pushMessage(groupId, message);
       setTimeout(async () => {
         await this.handleRanking(groupId, null, true);
       }, 1e3);
     } else {
-      await this.lineAPI.replyMessage(replyToken, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
+      await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
 
 ${result.error}`);
     }
+    });
+    
+    // 処理が完了するまで待たずに返す（タイムアウト回避）
+    return;
   }
   async handleUndo(groupId, replyToken) {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
