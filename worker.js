@@ -3184,21 +3184,16 @@ var RankingImageGenerator = class {
             viewport_width: viewportWidth,
             viewport_height: viewportHeight,
             device_scale: 2,
-            ms_delay: isStatsImage ? 3000 : 1000 // Chart.js rendering wait time
+            ms_delay: isStatsImage ? 2000 : 500 // Chart.js rendering wait time
           })
         });
         console.log("[DEBUG] HCTI API response status:", response.status);
         if (response.ok) {
           const data = await response.json();
           console.log("[INFO] HCTI API returned URL:", data.url);
-          const imageResponse = await fetch(data.url);
-          if (imageResponse.ok) {
-            const buffer = await imageResponse.arrayBuffer();
-            console.log("[INFO] HCTI conversion successful, size:", buffer.byteLength, "bytes");
-            return { success: true, buffer, method: "hcti" };
-          } else {
-            console.warn("[WARN] Failed to download image from HCTI:", imageResponse.status);
-          }
+          // 直接URLを返す（ダウンロードはスキップしてCPU時間を節約）
+          console.log("[INFO] HCTI conversion successful, returning URL directly");
+          return { success: true, url: data.url, method: "hcti-url" };
         } else {
           const errorText = await response.text();
           console.warn("[WARN] HCTI API failed:", response.status, errorText);
@@ -3326,20 +3321,38 @@ var StatsImageGenerator = class {
   // 統計グラフ画像を生成（PNG形式）
   async generateStatsImage(playerStats, playerName, records, seasonKey) {
     try {
-      console.log('[INFO] Generating stats image for:', playerName);
+      console.log('[INFO] === Starting stats image generation ===');
+      console.log('[INFO] Player:', playerName);
+      console.log('[INFO] Total games:', playerStats.totalGames);
       
+      console.log('[INFO] Step 1: Generating HTML...');
       const html = this.generateStatsHTML(playerStats, playerName, records, seasonKey);
-      console.log('[INFO] Stats HTML generated, length:', html.length);
+      console.log('[INFO] HTML generated, length:', html.length);
       
+      console.log('[INFO] Step 2: Converting HTML to PNG...');
       const conversionResult = await this.convertHtmlToPng(html);
+      console.log('[INFO] Conversion completed:', conversionResult.success ? 'SUCCESS' : 'FAILED');
       
       if (!conversionResult.success) {
-        throw new Error('PNG conversion failed');
+        console.error('[ERROR] Conversion failed:', conversionResult.error);
+        throw new Error(conversionResult.error || 'PNG conversion failed');
       }
       
       console.log(`[INFO] Conversion method: ${conversionResult.method}`);
       
-      // KVストレージに保存
+      // HCTI URLを直接返す場合（CPU時間を節約）
+      if (conversionResult.url) {
+        console.log('[INFO] === Stats image generation COMPLETED (direct URL) ===');
+        console.log('[INFO] HCTI URL:', conversionResult.url);
+        return {
+          success: true,
+          imageUrl: conversionResult.url,
+          format: 'png',
+          method: conversionResult.method
+        };
+      }
+      
+      // KVストレージに保存（古い方式 - bufferやsvgの場合）
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(7);
       const imageKey = `stats/${timestamp}-${random}.png`;
@@ -3367,7 +3380,9 @@ var StatsImageGenerator = class {
         throw new Error('No valid image data');
       }
       
-      console.log('[INFO] Storing in KV...');
+      console.log('[INFO] Step 3: Storing in KV...');
+      console.log('[INFO] Image key:', imageKey);
+      console.log('[INFO] Content type:', contentType);
       await this.kv.put(imageKey, imageData, {
         expirationTtl: 86400, // 24時間
         metadata: {
@@ -3380,8 +3395,9 @@ var StatsImageGenerator = class {
       });
       
       const publicUrl = `https://mahjong-line-bot.ogaiku.workers.dev/images/${imageKey}`;
-      console.log('[INFO] Stats image generation successful');
+      console.log('[INFO] === Stats image generation COMPLETED ===');
       console.log('[INFO] Public URL:', publicUrl);
+      console.log('[INFO] Method:', conversionResult.method);
       
       return {
         success: true,
