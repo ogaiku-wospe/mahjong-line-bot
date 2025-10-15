@@ -1513,7 +1513,7 @@ var CommandRouter = class {
       }
       const quickMatch = command.match(/^(記録|r|rec)\s+(.+)$/);
       if (quickMatch) {
-        await this.handleQuickRecord(quickMatch[2], groupId, userId, replyToken);
+        await this.handleQuickRecord(quickMatch[2], groupId, userId, replyToken, ctx);
         return;
       }
       if (command.match(/^(取消|取り消し|undo|u)$/)) {
@@ -1717,7 +1717,7 @@ ${result.error}`);
       await this.lineAPI.replyMessage(replyToken, `\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F: ${error.toString()}`);
     }
   }
-  async handleQuickRecord(dataStr, groupId, userId, replyToken) {
+  async handleQuickRecord(dataStr, groupId, userId, replyToken, ctx = null) {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(
@@ -1776,50 +1776,53 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
     await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
     
     // バックグラウンドで記録処理を実行（タイムアウト回避）
-    const recordPromise = this.spreadsheetManager.addGameRecord(seasonKey, {
-      gameType,
-      players,
-      scores,
-      userId
-    }).then(async (result) => {
-      if (result.success) {
-      let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
-      message += `\u3010\u5BFE\u6226\u7D50\u679C\u3011 ${gameType}
-`;
-      const sortedResults = [];
-      for (let i = 0; i < players.length; i++) {
-        const rank = this.calculator.calculateRank(scores[i], scores);
-        const gameScore = this.calculator.calculateGameScore(
-          scores[i],
+    if (ctx) {
+      ctx.waitUntil(
+        this.spreadsheetManager.addGameRecord(seasonKey, {
           gameType,
-          rank,
-          players.length
-        );
-        sortedResults.push({
-          name: players[i],
-          score: scores[i],
-          rank,
-          gameScore
-        });
-      }
-      sortedResults.sort((a, b) => a.rank - b.rank);
-      sortedResults.forEach((r) => {
-        const sign = r.gameScore >= 0 ? "+" : "";
-        message += `${r.rank}\u4F4D ${r.name}: ${r.score.toLocaleString()}\u70B9 (${sign}${r.gameScore.toFixed(1)}pt)
+          players,
+          scores,
+          userId
+        }).then(async (result) => {
+          if (result.success) {
+            let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
+            message += `\u3010\u5BFE\u6226\u7D50\u679C\u3011 ${gameType}
 `;
-      });
-      await this.lineAPI.pushMessage(groupId, message);
-      setTimeout(async () => {
-        await this.handleRanking(groupId, null, true);
-      }, 1e3);
-    } else {
-      await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
+            const sortedResults = [];
+            for (let i = 0; i < players.length; i++) {
+              const rank = this.calculator.calculateRank(scores[i], scores);
+              const gameScore = this.calculator.calculateGameScore(
+                scores[i],
+                gameType,
+                rank,
+                players.length
+              );
+              sortedResults.push({
+                name: players[i],
+                score: scores[i],
+                rank,
+                gameScore
+              });
+            }
+            sortedResults.sort((a, b) => a.rank - b.rank);
+            sortedResults.forEach((r) => {
+              const sign = r.gameScore >= 0 ? "+" : "";
+              message += `${r.rank}\u4F4D ${r.name}: ${r.score.toLocaleString()}\u70B9 (${sign}${r.gameScore.toFixed(1)}pt)
+`;
+            });
+            await this.lineAPI.pushMessage(groupId, message);
+            await this.handleRanking(groupId, null, true);
+          } else {
+            await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
 
 ${result.error}`);
+          }
+        }).catch(async (error) => {
+          console.error("[ERROR] Background record processing failed:", error);
+          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+        })
+      );
     }
-    });
-    
-    // 処理が完了するまで待たずに返す（タイムアウト回避）
     return;
   }
   async handleUndo(groupId, replyToken) {
