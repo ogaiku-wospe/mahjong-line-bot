@@ -3923,7 +3923,7 @@ var StatsImageGenerator = class {
         scales: {
           y: {
             beginAtZero: true,
-            max: ${Math.max(...rankData) + 3},
+            max: ${Math.ceil(Math.max(...rankData) * 1.2)},
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
             },
