@@ -2694,7 +2694,12 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
     
     // 記録処理を実行（一時的に同期実行でテスト）
     console.log('[INFO] handleQuickRecord - Starting record processing (sync mode for debugging)');
+    
+    // デバッグ: 処理開始を通知
+    await this.lineAPI.pushMessage(groupId, `[DEBUG] 記録処理を開始します\nプレイヤー: ${players.join(', ')}\n点数: ${scores.join(', ')}`);
+    
     try {
+      console.log('[INFO] handleQuickRecord - Calling addGameRecord...');
       const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
         gameType,
         players,
