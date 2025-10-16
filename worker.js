@@ -1953,23 +1953,11 @@ ${error.toString()}
               return;
             }
             
-            // データをパース（メンションと雀魂名の混在に対応）
+            // データをパース（AI推測コマンドは交互形式）
             const tokens = dataStr.trim().split(/[\s\n]+/).filter((t) => t);
             const scores = [];
             const players = [];
             
-            // まず点数を抽出
-            for (const token of tokens) {
-              const score = parseInt(token);
-              if (!isNaN(score)) {
-                scores.push(score);
-              }
-            }
-            
-            // AI推測コマンドの場合、mentionedUsersは使用できない
-            // （AIが生成したテキストにはメンション情報が含まれていないため）
-            // 従って、従来通りの交互形式でパース
-            console.log('[DEBUG] AI record - mentionedUsers count:', mentionedUsers.length);
             console.log('[DEBUG] AI record - tokens:', tokens.join(', '));
             
             if (tokens.length < 4 || tokens.length % 2 !== 0) {
@@ -1980,6 +1968,7 @@ ${error.toString()}
               return;
             }
             
+            // 交互形式でパース（名前1 点数1 名前2 点数2 ...）
             for (let i = 0; i < tokens.length; i += 2) {
               players.push(tokens[i]);
               const score = parseInt(tokens[i + 1]);
