@@ -2752,23 +2752,33 @@ ${rankDistText}
     await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計画像を生成中...`);
     
     try {
-      const result = await this.statsImageGenerator.generateStatsImage(
+      // タイムアウト付きで画像生成を実行（30秒）
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('画像生成がタイムアウトしました（30秒）')), 30000)
+      );
+      
+      const generationPromise = this.statsImageGenerator.generateStatsImage(
         playerStats,
         playerName,
         records,
         seasonKey
       );
       
+      console.log('[INFO] Waiting for image generation (with 30s timeout)...');
+      const result = await Promise.race([generationPromise, timeoutPromise]);
+      console.log('[INFO] Image generation completed or timed out');
+      
       if (result.success) {
         console.log('[INFO] Stats image generated successfully');
         await this.lineAPI.pushImage(groupId, result.imageUrl);
       } else {
         console.error('[ERROR] Stats image generation failed:', result.error);
-        await this.lineAPI.pushMessage(groupId, `画像生成に失敗しました: ${result.error}`);
+        await this.lineAPI.pushMessage(groupId, `■ 画像生成に失敗しました\n\n${result.error}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
       }
     } catch (error) {
       console.error('[ERROR] Exception during stats image generation:', error);
-      await this.lineAPI.pushMessage(groupId, `画像生成中にエラーが発生しました: ${error.message}`);
+      console.error('[ERROR] Error stack:', error.stack);
+      await this.lineAPI.pushMessage(groupId, `■ 画像生成中にエラーが発生しました\n\n${error.message}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
     }
   }
   async handleSeasonCreate(groupId, seasonName, replyToken, ctx = null) {

@@ -531,34 +531,55 @@ export class StatsImageGenerator {
       console.log('[INFO] Trying htmlcsstoimage.com API...');
       
       const auth = btoa(`${this.env.HCTI_API_USER_ID}:${this.env.HCTI_API_KEY}`);
-      const response = await fetch('https://hcti.io/v1/image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          html: html,
-          viewport_width: 1200,
-          viewport_height: 1600
-        })
-      });
+      
+      // タイムアウト付きfetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25秒でタイムアウト
+      
+      try {
+        console.log('[INFO] Sending request to HCTI API...');
+        const response = await fetch('https://hcti.io/v1/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            html: html,
+            viewport_width: 1200,
+            viewport_height: 1600
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        console.log('[INFO] HCTI API response received, status:', response.status);
 
-      if (response.ok) {
-        console.log('[INFO] HCTI API response OK, parsing JSON...');
-        const text = await response.text();
-        console.log('[INFO] Response text length:', text.length);
-        const data = JSON.parse(text);
-        console.log('[INFO] HCTI API returned URL:', data.url);
-        console.log('[INFO] HCTI conversion successful, returning URL directly');
-        return { success: true, url: data.url, method: 'hcti-url' };
-      } else {
-        const errorText = await response.text();
-        console.error('[ERROR] HCTI API error response:', response.status, errorText);
-        throw new Error(`HCTI API error: ${response.status} - ${errorText}`);
+        if (response.ok) {
+          console.log('[INFO] HCTI API response OK, parsing JSON...');
+          const text = await response.text();
+          console.log('[INFO] Response text length:', text.length);
+          const data = JSON.parse(text);
+          console.log('[INFO] HCTI API returned URL:', data.url);
+          console.log('[INFO] HCTI conversion successful, returning URL directly');
+          return { success: true, url: data.url, method: 'hcti-url' };
+        } else {
+          const errorText = await response.text();
+          console.error('[ERROR] HCTI API error response:', response.status, errorText);
+          throw new Error(`HCTI API error: ${response.status} - ${errorText}`);
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error('[ERROR] HCTI API request timed out after 25 seconds');
+          throw new Error('画像生成がタイムアウトしました。もう一度お試しください。');
+        }
+        throw fetchError;
       }
     } catch (error) {
       console.error('[ERROR] PNG conversion failed:', error);
+      console.error('[ERROR] Error name:', error.name);
+      console.error('[ERROR] Error stack:', error.stack);
       return {
         success: false,
         error: error.message
