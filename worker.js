@@ -2714,16 +2714,16 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
         
         if (result.success) {
           // 成功通知
-          await this.lineAPI.pushMessage(groupId, "\u2705 \u8A18\u9332\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F");
+          await this.lineAPI.pushMessage(groupId, "[成功] 記録が完了しました");
           console.log('[INFO] handleQuickRecord - Background: Success notification sent');
         } else {
           console.log('[ERROR] handleQuickRecord - Background: Record add failed:', result.error);
-          await this.lineAPI.pushMessage(groupId, `\u274C \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
+          await this.lineAPI.pushMessage(groupId, `[失敗] 記録の追加に失敗しました\n\n${result.error}`);
         }
       } catch (error) {
         console.error("[ERROR] handleQuickRecord - Background exception:", error);
         try {
-          await this.lineAPI.pushMessage(groupId, `\u274C \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+          await this.lineAPI.pushMessage(groupId, `[エラー] 記録処理中にエラーが発生しました\n\n${error.message}`);
         } catch (pushError) {
           console.error("[ERROR] handleQuickRecord - Background: Failed to send error message:", pushError);
         }
