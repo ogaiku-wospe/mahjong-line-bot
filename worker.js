@@ -4160,10 +4160,10 @@ var StatsImageGenerator = class {
   async convertHtmlToPng(html) {
     console.log('[INFO] Converting HTML to PNG...');
     
-    // HTMLからサイズを検出（RankingImageGeneratorと同じロジック）
+    // HTMLからサイズを検出（統計画像は軽量化のため小さめに）
     const isStatsImage = html.includes('Chart.js') || html.includes('width: 1200px');
-    const viewportWidth = isStatsImage ? 1200 : 800;
-    const viewportHeight = isStatsImage ? 1400 : 1100;
+    const viewportWidth = isStatsImage ? 1000 : 800;
+    const viewportHeight = isStatsImage ? 900 : 1100;
     console.log(`[INFO] Detected image type: ${isStatsImage ? 'stats' : 'ranking'}, size: ${viewportWidth}x${viewportHeight}`);
     
     const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
@@ -4188,7 +4188,7 @@ var StatsImageGenerator = class {
             html,
             viewport_width: viewportWidth,
             viewport_height: viewportHeight,
-            device_scale: 2,
+            device_scale: isStatsImage ? 1 : 2,
             ms_delay: 0
           })
         });
