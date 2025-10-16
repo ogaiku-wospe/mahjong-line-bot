@@ -1966,48 +1966,28 @@ ${error.toString()}
               }
             }
             
-            // メンションがある場合は、メンション情報を使用
-            if (mentionedUsers.length > 0) {
-              // メンション分のプレイヤーを追加
-              for (const user of mentionedUsers) {
-                const playerName = await this.playerManager.getPlayerNameByLineUserId(user.userId);
-                if (!playerName) {
-                  await this.lineAPI.pushMessage(
-                    groupId,
-                    `${user.displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${user.displayName} [雀魂名]」で結びつけてください。`
-                  );
-                  return;
-                }
-                players.push(playerName);
-              }
-              
-              // 残りのトークン（雀魂名）を追加
-              for (const token of tokens) {
-                const score = parseInt(token);
-                if (isNaN(score)) {
-                  // 数字でないものは雀魂名として追加
-                  players.push(token);
-                }
-              }
-            } else {
-              // メンションがない場合は従来通り
-              if (tokens.length < 4 || tokens.length % 2 !== 0) {
-                await this.lineAPI.pushMessage(
-                  groupId,
-                  "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
-                );
+            // AI推測コマンドの場合、mentionedUsersは使用できない
+            // （AIが生成したテキストにはメンション情報が含まれていないため）
+            // 従って、従来通りの交互形式でパース
+            console.log('[DEBUG] AI record - mentionedUsers count:', mentionedUsers.length);
+            console.log('[DEBUG] AI record - tokens:', tokens.join(', '));
+            
+            if (tokens.length < 4 || tokens.length % 2 !== 0) {
+              await this.lineAPI.pushMessage(
+                groupId,
+                "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
+              );
+              return;
+            }
+            
+            for (let i = 0; i < tokens.length; i += 2) {
+              players.push(tokens[i]);
+              const score = parseInt(tokens[i + 1]);
+              if (isNaN(score)) {
+                await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
                 return;
               }
-              
-              for (let i = 0; i < tokens.length; i += 2) {
-                players.push(tokens[i]);
-                const score = parseInt(tokens[i + 1]);
-                if (isNaN(score)) {
-                  await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
-                  return;
-                }
-                scores.push(score);
-              }
+              scores.push(score);
             }
             
             // プレイヤー数と点数の数が合っているか確認
