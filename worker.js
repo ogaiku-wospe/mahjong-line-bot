@@ -1942,10 +1942,14 @@ ${error.toString()}
             }
           } else if (suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)) {
             // 記録コマンド - バックグラウンド実行用
+            console.log('[INFO] AI record command detected');
             const dataStr = suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)[2];
+            console.log('[INFO] Fetching season key...');
             const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
+            console.log('[INFO] Season key:', seasonKey);
             
             if (!seasonKey) {
+              console.log('[ERROR] No season key found');
               await this.lineAPI.pushMessage(
                 groupId,
                 "シーズンが設定されていません。\n「@麻雀点数管理bot シーズン作成 [名前]」で作成してください。"
@@ -1961,6 +1965,7 @@ ${error.toString()}
             console.log('[DEBUG] AI record - tokens:', tokens.join(', '));
             
             if (tokens.length < 4 || tokens.length % 2 !== 0) {
+              console.log('[ERROR] Invalid token count');
               await this.lineAPI.pushMessage(
                 groupId,
                 "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
@@ -1969,18 +1974,23 @@ ${error.toString()}
             }
             
             // 交互形式でパース（名前1 点数1 名前2 点数2 ...）
+            console.log('[INFO] Parsing alternating format...');
             for (let i = 0; i < tokens.length; i += 2) {
               players.push(tokens[i]);
               const score = parseInt(tokens[i + 1]);
               if (isNaN(score)) {
+                console.log('[ERROR] Invalid score:', tokens[i + 1]);
                 await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
                 return;
               }
               scores.push(score);
             }
+            console.log('[INFO] Parsed players:', players.join(', '));
+            console.log('[INFO] Parsed scores:', scores.join(', '));
             
             // プレイヤー数と点数の数が合っているか確認
             if (players.length !== scores.length) {
+              console.log('[ERROR] Player/score count mismatch');
               await this.lineAPI.pushMessage(
                 groupId,
                 `プレイヤー数(${players.length})と点数の数(${scores.length})が一致しません。`
@@ -1992,12 +2002,12 @@ ${error.toString()}
             const totalScore = scores.reduce((a, b) => a + b, 0);
             const expectedTotal = players.length === 3 ? 105e3 : 1e5;
             
-            console.log("[DEBUG] AI suggested record - Players:", players.join(", "));
-            console.log("[DEBUG] AI suggested record - Scores:", scores.join(", "));
-            console.log("[DEBUG] AI suggested record - Total:", totalScore);
-            console.log("[DEBUG] AI suggested record - Expected:", expectedTotal);
+            console.log("[INFO] Game type:", gameType);
+            console.log("[INFO] Total score:", totalScore);
+            console.log("[INFO] Expected total:", expectedTotal);
             
             if (Math.abs(totalScore - expectedTotal) > 1e3) {
+              console.log('[WARN] Score total check failed');
               await this.lineAPI.pushMessage(
                 groupId,
                 `■ 点数の確認\n\n入力された合計: ${totalScore.toLocaleString()}点\n正しい合計: ${expectedTotal.toLocaleString()}点 (${gameType})\n差分: ${(totalScore - expectedTotal).toLocaleString()}点\n\n各プレイヤーの点数:\n${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}点`).join('\n')}\n\n点数を確認してください。`
@@ -2006,14 +2016,17 @@ ${error.toString()}
             }
             
             // 記録を追加
+            console.log('[INFO] Adding game record to spreadsheet...');
             const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
               gameType,
               players,
               scores,
               userId
             });
+            console.log('[INFO] Add game record result:', result.success);
             
             if (result.success) {
+              console.log('[INFO] Record added successfully, generating message...');
               let message = "■ 記録を追加しました\n\n";
               message += `【対戦結果】 ${gameType}\n`;
               const sortedResults = [];
@@ -2037,9 +2050,13 @@ ${error.toString()}
                 const sign = r.gameScore >= 0 ? "+" : "";
                 message += `${r.rank}位 ${r.name}: ${r.score.toLocaleString()}点 (${sign}${r.gameScore.toFixed(1)}pt)\n`;
               });
+              console.log('[INFO] Sending success message...');
               await this.lineAPI.pushMessage(groupId, message);
+              console.log('[INFO] Success message sent, fetching ranking...');
               await this.handleRanking(groupId, null, true);
+              console.log('[INFO] Ranking sent successfully');
             } else {
+              console.log('[ERROR] Failed to add record:', result.error);
               await this.lineAPI.pushMessage(groupId, `■ 記録の追加に失敗しました\n\n${result.error}`);
             }
           } else if (suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)) {
