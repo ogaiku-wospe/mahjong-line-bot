@@ -1202,7 +1202,8 @@ var LineAPI = class {
       replyToken,
       messages: [{
         type: "text",
-        text
+        text,
+        notificationDisabled: true
       }]
     };
     try {
@@ -1224,7 +1225,8 @@ var LineAPI = class {
       to,
       messages: [{
         type: "text",
-        text
+        text,
+        notificationDisabled: true
       }]
     };
     try {
@@ -1247,6 +1249,7 @@ var LineAPI = class {
       messages: [{
         type: "text",
         text,
+        notificationDisabled: true,
         quickReply: {
           items: quickReplyItems.map((item) => ({
             type: "action",
@@ -1738,7 +1741,7 @@ ${error.toString()}
     return /^(ランキング|順位|rank|ranking)$/.test(command);
   }
   async showHelp(replyToken) {
-    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n\n【一括結びつけ】lk @ユーザー1 [雀魂名1] @ユーザー2 [雀魂名2]...\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n  ※画像解析時に表示名が関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名] ...\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
   // ========== AI推測機能 ==========
@@ -1858,7 +1861,7 @@ ${error.toString()}
             }
           } else if (this.matchHelp(suggestedCommand)) {
             // ヘルプはreplyToken必須なので、内容を取得してpushMessageで送信
-            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n\n【一括結びつけ】lk @ユーザー1 [雀魂名1] @ユーザー2 [雀魂名2]...\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n  ※画像解析時に表示名が関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名] ...\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
             await this.lineAPI.pushMessage(groupId, helpText);
           } else if (suggestedCommand.match(/^(画像解析|img|image|解析)$/)) {
             // handleImageAnalysisRequestはreplyTokenが必須なので、直接処理
@@ -2412,8 +2415,8 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       summaryMessage += `\n【結果詳細】\n`;
       
       results.forEach((r, i) => {
-        const statusIcon = r.success ? '✅' : '❌';
-        summaryMessage += `${i + 1}. ${statusIcon} ${r.user} → ${r.mahjongName}\n`;
+        const status = r.success ? '成功' : '失敗';
+        summaryMessage += `${i + 1}. [${status}] ${r.user} → ${r.mahjongName}\n`;
         if (!r.success) {
           summaryMessage += `   理由: ${r.message}\n`;
         }
@@ -4285,7 +4288,7 @@ async function handleLineWebhook(request, env, ctx) {
       }
     } else if (event.type === "join") {
       const groupId = event.source.groupId;
-      const welcomeMessage = "\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot\u3067\u3059\u3002\n\n\u4F7F\u3044\u65B9: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D8\u30EB\u30D7\n\u6700\u521D\u306B\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u30B7\u30FC\u30BA\u30F3\u540D]\u300D\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+      const welcomeMessage = "麻雀点数管理botを追加いただきありがとうございます。\n\n【最初にやること】\n1. シーズン作成\n   @麻雀点数管理bot sc 2024秋\n\n2. プレイヤー登録\n   @麻雀点数管理bot pr 山田\n\n3. LINEユーザーと雀魂名を結びつけ\n   @麻雀点数管理bot lk @山田 ogaiku\n\n【すぐ使える機能】\n・画像で記録: @麻雀点数管理bot img\n・手動記録: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n・ランキング: @麻雀点数管理bot rank\n\n全機能: @麻雀点数管理bot h";
       await lineAPI.pushMessage(groupId, welcomeMessage);
     } else {
       console.log("[WARN] Unhandled event type:", event.type);
