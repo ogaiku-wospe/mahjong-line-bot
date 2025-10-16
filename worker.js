@@ -1932,15 +1932,15 @@ ${error.toString()}
             }
             
             let message = `【${playerName}さんの統計】\n\n`;
-            message += `対戦数: ${playerStats.gamesPlayed}回\n`;
+            message += `対戦数: ${playerStats.totalGames}回\n`;
             message += `合計: ${playerStats.totalScore >= 0 ? '+' : ''}${playerStats.totalScore.toFixed(1)}pt\n`;
-            message += `平均: ${playerStats.averageScore >= 0 ? '+' : ''}${playerStats.averageScore.toFixed(1)}pt\n`;
-            message += `平均順位: ${playerStats.averageRank.toFixed(2)}位\n\n`;
+            message += `平均: ${playerStats.avgScore >= 0 ? '+' : ''}${playerStats.avgScore.toFixed(1)}pt\n`;
+            message += `平均順位: ${playerStats.avgRank.toFixed(2)}位\n\n`;
             message += `【順位分布】\n`;
-            message += `1位: ${playerStats.firstCount}回 (${playerStats.firstRate.toFixed(1)}%)\n`;
-            message += `2位: ${playerStats.secondCount}回 (${playerStats.secondRate.toFixed(1)}%)\n`;
-            message += `3位: ${playerStats.thirdCount}回 (${playerStats.thirdRate.toFixed(1)}%)\n`;
-            message += `4位: ${playerStats.fourthCount}回 (${playerStats.fourthRate.toFixed(1)}%)`;
+            message += `1位: ${playerStats.rankDist[1] || 0}回 (${((playerStats.rankDist[1] || 0) / playerStats.totalGames * 100).toFixed(1)}%)\n`;
+            message += `2位: ${playerStats.rankDist[2] || 0}回 (${((playerStats.rankDist[2] || 0) / playerStats.totalGames * 100).toFixed(1)}%)\n`;
+            message += `3位: ${playerStats.rankDist[3] || 0}回 (${((playerStats.rankDist[3] || 0) / playerStats.totalGames * 100).toFixed(1)}%)\n`;
+            message += `4位: ${playerStats.rankDist[4] || 0}回 (${((playerStats.rankDist[4] || 0) / playerStats.totalGames * 100).toFixed(1)}%)`;
             
             await this.lineAPI.pushMessage(groupId, message);
           } else if (suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)) {
@@ -1994,6 +1994,10 @@ ${error.toString()}
               console.error('[ERROR] Exception during stats image generation:', error);
               await this.lineAPI.pushMessage(groupId, `画像生成中にエラーが発生しました: ${error.message}`);
             }
+          } else {
+            // どのコマンドにもマッチしなかった場合
+            console.warn("[WARN] No matching command handler found for:", suggestedCommand);
+            await this.lineAPI.pushMessage(groupId, `■ コマンドを認識できませんでした\n\n推測されたコマンド: ${suggestedCommand}\n\nヘルプを表示:\n@麻雀点数管理bot h`);
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
@@ -2218,10 +2222,18 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       }
 
       const data = await response.json();
-      const suggestedCommand = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      let suggestedCommand = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       
       if (suggestedCommand && suggestedCommand.toLowerCase() !== "null") {
-        console.log("[INFO] AI suggested command:", suggestedCommand);
+        // AIの出力からバッククォートやマークダウンを除去
+        suggestedCommand = suggestedCommand
+          .replace(/```[\s\S]*?```/g, '') // コードブロックを除去
+          .replace(/`([^`]+)`/g, '$1')     // インラインコードを除去
+          .replace(/^[\s\n]+|[\s\n]+$/g, '') // 前後の空白・改行を除去
+          .split('\n')[0]                  // 最初の行のみ取得
+          .trim();
+        
+        console.log("[INFO] AI suggested command:", JSON.stringify(suggestedCommand));
         return suggestedCommand;
       }
       
