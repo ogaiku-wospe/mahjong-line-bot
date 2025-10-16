@@ -1608,10 +1608,24 @@ var CommandRouter = class {
         return;
       }
       if (mentionedUsers.length > 0) {
-        // 結びつけコマンド（新形式）: link/lk/結びつけ @ユーザー 雀魂名
+        // 結びつけコマンド（新形式）: link/lk/結びつけ @ユーザー 雀魂名 [@ユーザー2 雀魂名2 ...]
         const linkMatch = command.match(/^(link|lk|結びつけ)\s+(.+)$/);
         if (linkMatch) {
-          const mahjongName = linkMatch[2].trim();
+          const restOfCommand = linkMatch[2].trim();
+          
+          // 複数ユーザーの一括結びつけをサポート
+          if (mentionedUsers.length > 1) {
+            await this.handleBulkPlayerLink(
+              groupId,
+              mentionedUsers,
+              restOfCommand,
+              replyToken
+            );
+            return;
+          }
+          
+          // 単一ユーザーの結びつけ
+          const mahjongName = restOfCommand;
           await this.handlePlayerLink(
             groupId,
             mentionedUsers[0],
@@ -1724,7 +1738,7 @@ ${error.toString()}
     return /^(ランキング|順位|rank|ranking)$/.test(command);
   }
   async showHelp(replyToken) {
-    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  ※画像解析時に自動的に関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n\n【一括結びつけ】lk @ユーザー1 [雀魂名1] @ユーザー2 [雀魂名2]...\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n  ※画像解析時に表示名が関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
   // ========== AI推測機能 ==========
@@ -1844,7 +1858,7 @@ ${error.toString()}
             }
           } else if (this.matchHelp(suggestedCommand)) {
             // ヘルプはreplyToken必須なので、内容を取得してpushMessageで送信
-            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  ※画像解析時に自動的に関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n\n【一括結びつけ】lk @ユーザー1 [雀魂名1] @ユーザー2 [雀魂名2]...\n  例: @麻雀点数管理bot lk @山田 ogaiku @鈴木 player2\n  ※画像解析時に表示名が関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
             await this.lineAPI.pushMessage(groupId, helpText);
           } else if (suggestedCommand.match(/^(画像解析|img|image|解析)$/)) {
             // handleImageAnalysisRequestはreplyTokenが必須なので、直接処理
@@ -2309,6 +2323,110 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       return null;
     }
   }
+  // ========== 複数LINEユーザーと雀魂ニックネームを一括結びつけ ==========
+  async handleBulkPlayerLink(groupId, mentionedUsers, restOfCommand, replyToken) {
+    try {
+      console.log('[INFO] Bulk linking LINE users to Mahjong names');
+      console.log('[INFO] Mentioned users count:', mentionedUsers.length);
+      console.log('[INFO] Rest of command:', restOfCommand);
+      
+      // コマンドテキストからメンションとその後の雀魂名を抽出
+      // 例: "@user1 ogaiku @user2 player2" から [["ogaiku"], ["player2"]] を抽出
+      const words = restOfCommand.split(/\s+/).filter(w => w.trim());
+      const mahjongNames = [];
+      
+      // メンションの数だけ雀魂名を抽出
+      let currentName = null;
+      for (const word of words) {
+        // メンションの次の単語が雀魂名
+        if (currentName === null) {
+          currentName = word;
+        } else if (!word.startsWith('@')) {
+          // メンションではない = 雀魂名の一部かもしれない
+          currentName = word;
+        }
+        
+        // 次のメンション検出時、または配列の最後で雀魂名を確定
+        if (mahjongNames.length < mentionedUsers.length) {
+          const nextWordIndex = words.indexOf(word) + 1;
+          const nextWord = words[nextWordIndex];
+          if (!nextWord || nextWord.startsWith('@') || nextWordIndex >= words.length) {
+            if (currentName && !currentName.startsWith('@')) {
+              mahjongNames.push(currentName);
+              currentName = null;
+            }
+          }
+        }
+      }
+      
+      // マッチング数を確認
+      if (mahjongNames.length !== mentionedUsers.length) {
+        await this.lineAPI.replyMessage(
+          replyToken,
+          `■ エラー\n\nメンション数(${mentionedUsers.length}人)と雀魂名の数(${mahjongNames.length}個)が一致しません。\n\n正しい形式:\n@麻雀点数管理bot lk @ユーザー1 雀魂名1 @ユーザー2 雀魂名2`
+        );
+        return;
+      }
+      
+      console.log('[INFO] Extracted Mahjong names:', mahjongNames);
+      
+      // 即座に処理開始メッセージを返す
+      await this.lineAPI.replyMessage(replyToken, `■ 結びつけ処理中...\n\n${mentionedUsers.length}人のプレイヤーを処理しています...`);
+      
+      // 各ユーザーを順次結びつけ
+      const results = [];
+      for (let i = 0; i < mentionedUsers.length; i++) {
+        const user = mentionedUsers[i];
+        const mahjongName = mahjongNames[i];
+        
+        console.log(`[INFO] Processing ${i + 1}/${mentionedUsers.length}: ${user.displayName} -> ${mahjongName}`);
+        
+        const result = await this.playerManager.registerPlayerWithLine(
+          mahjongName,
+          user.userId,
+          user.displayName
+        );
+        
+        if (result.success) {
+          await this.seasonManager.registerPlayer(mahjongName);
+        }
+        
+        results.push({
+          user: user.displayName,
+          mahjongName,
+          success: result.success,
+          message: result.message
+        });
+      }
+      
+      // 結果をまとめて送信
+      let summaryMessage = `■ 一括結びつけ完了\n\n`;
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+      
+      summaryMessage += `成功: ${successCount}件\n`;
+      if (failCount > 0) {
+        summaryMessage += `失敗: ${failCount}件\n`;
+      }
+      summaryMessage += `\n【結果詳細】\n`;
+      
+      results.forEach((r, i) => {
+        const statusIcon = r.success ? '✅' : '❌';
+        summaryMessage += `${i + 1}. ${statusIcon} ${r.user} → ${r.mahjongName}\n`;
+        if (!r.success) {
+          summaryMessage += `   理由: ${r.message}\n`;
+        }
+      });
+      
+      await this.lineAPI.pushMessage(groupId, summaryMessage);
+      
+    } catch (error) {
+      console.error('[ERROR] handleBulkPlayerLink failed:', error);
+      await this.lineAPI.pushMessage(groupId, `■ エラーが発生しました\n\n${error.message}`);
+    }
+  }
+  
   // ========== LINEユーザーと雀魂ニックネームを結びつけ ==========
   async handlePlayerLink(groupId, mentionedUser, mahjongName, replyToken) {
     try {
