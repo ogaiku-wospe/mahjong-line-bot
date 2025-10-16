@@ -2681,7 +2681,7 @@ ${imageResult.error}`);
     if (!playerName) {
       await this.lineAPI.replyMessage(
         replyToken,
-        "プレイヤー名を指定してください。\n例: @麻雀bot 統計 山田"
+        "プレイヤー名を指定してください。\n例: @麻雀点数管理bot st 山田"
       );
       return;
     }
@@ -2729,7 +2729,7 @@ ${rankDistText}
     if (!playerName) {
       await this.lineAPI.replyMessage(
         replyToken,
-        "プレイヤー名を指定してください。\n例: @麻雀bot 統計画像 山田"
+        "プレイヤー名を指定してください。\n例: @麻雀点数管理bot stimg 山田"
       );
       return;
     }
