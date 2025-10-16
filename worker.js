@@ -1360,10 +1360,12 @@ __name(LineAPI, "LineAPI");
 
 // src/message-handler.js
 var MessageHandler = class {
-  constructor(lineAPI, imageAnalyzer, kvBinding = null) {
+  constructor(lineAPI, imageAnalyzer, kvBinding = null, config = null, sheetsClient = null) {
     this.lineAPI = lineAPI;
     this.imageAnalyzer = imageAnalyzer;
     this.kv = kvBinding;
+    this.config = config;
+    this.sheetsClient = sheetsClient;
     this.lastMentionTime = /* @__PURE__ */ new Map();
   }
   async handleTextMessage(event, commandRouter, ctx = null) {
@@ -1506,10 +1508,28 @@ var MessageHandler = class {
       if (result.success) {
         const players = result.players;
         const scores = result.scores;
+        
+        // 各プレイヤーのLINE連携情報を取得
+        const playerInfos = await Promise.all(
+          players.map(async (mahjongName) => {
+            const playerData = await this.config.getPlayerByName(this.sheetsClient, mahjongName);
+            return {
+              mahjongName,
+              lineDisplayName: playerData?.lineDisplayName || null,
+              lineUserId: playerData?.lineUserId || null
+            };
+          })
+        );
+        
+        console.log("[INFO] Player infos with LINE data:", JSON.stringify(playerInfos));
+        
         let confirmMsg = "\u25A0 \u753B\u50CF\u89E3\u6790\u5B8C\u4E86\n\n";
         confirmMsg += "\u3010\u89E3\u6790\u7D50\u679C\u3011\n";
-        players.forEach((name, i) => {
-          confirmMsg += `${i + 1}\u4F4D: ${name} - ${scores[i].toLocaleString()}\u70B9
+        playerInfos.forEach((info, i) => {
+          const displayName = info.lineDisplayName 
+            ? `${info.mahjongName} (${info.lineDisplayName})` 
+            : info.mahjongName;
+          confirmMsg += `${i + 1}\u4F4D: ${displayName} - ${scores[i].toLocaleString()}\u70B9
 `;
         });
         
@@ -1588,10 +1608,24 @@ var CommandRouter = class {
         return;
       }
       if (mentionedUsers.length > 0) {
+        // 結びつけコマンド（新形式）: link/lk/結びつけ @ユーザー 雀魂名
+        const linkMatch = command.match(/^(link|lk|結びつけ)\s+(.+)$/);
+        if (linkMatch) {
+          const mahjongName = linkMatch[2].trim();
+          await this.handlePlayerLink(
+            groupId,
+            mentionedUsers[0],
+            mahjongName,
+            replyToken
+          );
+          return;
+        }
+        
+        // 旧形式もサポート: プレイヤー登録 @ユーザー 雀魂名
         const playerRegisterMatch = command.match(/^プレイヤー登録\s+(.+)$/);
         if (playerRegisterMatch) {
           const playerName = playerRegisterMatch[1].trim();
-          await this.handlePlayerRegisterWithMention(
+          await this.handlePlayerLink(
             groupId,
             mentionedUsers[0],
             playerName,
@@ -1690,7 +1724,7 @@ ${error.toString()}
     return /^(ランキング|順位|rank|ranking)$/.test(command);
   }
   async showHelp(replyToken) {
-    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  ※画像解析時に自動的に関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
   // ========== AI推測機能 ==========
@@ -1810,7 +1844,7 @@ ${error.toString()}
             }
           } else if (this.matchHelp(suggestedCommand)) {
             // ヘルプはreplyToken必須なので、内容を取得してpushMessageで送信
-            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
+            const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【LINEと結びつけ】lk @ユーザー [雀魂名]\n  例: @麻雀点数管理bot lk @山田 ogaiku\n  ※画像解析時に自動的に関連付けられます\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
             await this.lineAPI.pushMessage(groupId, helpText);
           } else if (suggestedCommand.match(/^(画像解析|img|image|解析)$/)) {
             // handleImageAnalysisRequestはreplyTokenが必須なので、直接処理
@@ -2275,22 +2309,40 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       return null;
     }
   }
-  // ========== 新規追加: メンション付きプレイヤー登録 ==========
-  async handlePlayerRegisterWithMention(groupId, mentionedUser, playerName, replyToken) {
+  // ========== LINEユーザーと雀魂ニックネームを結びつけ ==========
+  async handlePlayerLink(groupId, mentionedUser, mahjongName, replyToken) {
     try {
+      console.log('[INFO] Linking LINE user to Mahjong name:', mentionedUser.userId, mahjongName);
+      
       const result = await this.playerManager.registerPlayerWithLine(
-        playerName,
+        mahjongName,
         mentionedUser.userId,
         mentionedUser.displayName
       );
-      await this.lineAPI.replyMessage(replyToken, result.message);
+      
+      let message = result.message;
+      
       if (result.success) {
-        await this.seasonManager.registerPlayer(playerName);
+        // シーズンにも登録
+        await this.seasonManager.registerPlayer(mahjongName);
+        
+        // 成功メッセージをより詳しく
+        message = `■ 結びつけ完了\n\n`;
+        message += `LINEユーザー: ${mentionedUser.displayName}\n`;
+        message += `雀魂ニックネーム: ${mahjongName}\n\n`;
+        message += `今後、画像解析や記録時に「${mahjongName}」が検出されると、自動的に ${mentionedUser.displayName} さんとして記録されます。`;
       }
+      
+      await this.lineAPI.replyMessage(replyToken, message);
     } catch (error) {
-      console.error("handlePlayerRegisterWithMention Error:", error);
-      await this.lineAPI.replyMessage(replyToken, `\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F: ${error.toString()}`);
+      console.error("handlePlayerLink Error:", error);
+      await this.lineAPI.replyMessage(replyToken, `■ エラーが発生しました\n\n${error.toString()}`);
     }
+  }
+  
+  // 後方互換性のため（削除予定）
+  async handlePlayerRegisterWithMention(groupId, mentionedUser, playerName, replyToken) {
+    return this.handlePlayerLink(groupId, mentionedUser, playerName, replyToken);
   }
   // ========== 新規追加: メンション付き記録 ==========
   async handleQuickRecordWithMentions(dataStr, groupId, userId, replyToken, mentionedUsers) {
@@ -4082,7 +4134,7 @@ async function handleLineWebhook(request, env, ctx) {
   const playerManager = new PlayerManager(scoreCalculator, sheetsClient, config);
   const seasonManager = new SeasonManager(sheetsClient, config);
   const imageAnalyzer = new ImageAnalyzer(config, sheetsClient);
-  const messageHandler = new MessageHandler(lineAPI, imageAnalyzer, env.IMAGES);
+  const messageHandler = new MessageHandler(lineAPI, imageAnalyzer, env.IMAGES, config, sheetsClient);
   const rankingImageGenerator = env.IMAGES ? new RankingImageGenerator(config, env, env.IMAGES) : null;
   const statsImageGenerator = env.IMAGES ? new StatsImageGenerator(config, env, env.IMAGES) : null;
   const commandRouter = new CommandRouter(
