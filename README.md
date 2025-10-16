@@ -1,6 +1,6 @@
 # mahjong-line-bot
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.2.0)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com/)
 
@@ -50,29 +50,36 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 
 ## 🚀 デプロイ情報
 
-- **Version**: v1.2.0 ✨
+- **Version**: v1.1.0 ✨
 - **Platform**: Cloudflare Workers
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
 - **Status**: ✅ Active and Stable
 - **Latest Release**: 2025-10-16
-- **Worker Version ID**: `50e217c2-8395-4cf4-b8cc-cc993e7b5c3d`
+- **Worker Version ID**: `dc7120be-ba78-422f-ba90-b555f1ac8abc`
 
-### 📝 v1.2.0 リリース内容
+### 📝 v1.1.0 リリース内容
 
-LINEメンション完全対応のマイナーバージョンアップです。
+LINE API無料プラン最適化のマイナーバージョンアップです。
 
-**新機能**:
-1. ✅ すべてのプレイヤー名指定コマンドでLINEメンション対応
-   - 統計表示: `st @user` でメンションから雀魂名を自動解決
-   - 統計画像: `stimg @user` でメンションから雀魂名を自動解決
-   - プレイヤー登録: `pr @user nickname` でメンション結びつけとして動作
-   - AI推測コマンドでも完全対応
+**重要な変更**:
+1. ✅ **記録コマンドが無料プランで運用可能に**
+   - `replyToken`のみを使用する設計に変更
+   - 月間メッセージ上限（500通）にカウントされなくなりました
+   - 処理完了時に1通のメッセージのみ表示（処理中メッセージ削除）
+   - 数秒の待ち時間が発生しますが、確実に結果が届きます
 
-**修正**:
-2. ✅ 統計テキスト表示の平均点棒にカンマ区切り追加
-   - 表示例: `28500点` → `28,500点`
-   - 最高点棒・最低点棒と表示形式を統一
+**その他の改善**:
+2. ✅ LINE API応答検証機能の追加
+   - エラー発生時に詳細なログを出力（429エラーなどの診断が容易）
+3. ✅ 通知設定の改善
+   - `notificationDisabled`を削除し、通常の通知を有効化
+
+**既知の制限**:
+- 以下のコマンドは引き続き`pushMessage`を使用するため、月間上限の影響を受けます:
+  - `img` (画像解析), `ri` (ランキング画像), `stimg` (統計画像), `lk` (一括結びつけ)
+  - AI推測コマンド
+- 月間上限は毎月1日午前0時（日本時間）にリセットされます
 
 詳細は [CHANGELOG.md](./CHANGELOG.md) を参照してください。
 
