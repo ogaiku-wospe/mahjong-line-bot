@@ -1636,7 +1636,7 @@ var CommandRouter = class {
       if (statsImageMatch) {
         const commandUsed = statsImageMatch[1];
         const playerName = statsImageMatch[2].trim();
-        await this.handleStatsImage(groupId, playerName, replyToken, commandUsed);
+        await this.handleStatsImage(groupId, playerName, replyToken, commandUsed, ctx);
         return;
       }
       const statsMatch = command.match(/^(統計|st|stats)\s*(.*)$/);
@@ -2722,7 +2722,9 @@ ${rankDistText}
   }
 
   // 画像形式の統計表示
-  async handleStatsImage(groupId, playerName, replyToken, commandUsed = 'stimg') {
+  async handleStatsImage(groupId, playerName, replyToken, commandUsed = 'stimg', ctx = null) {
+    // ctxを保存
+    this.ctx = ctx;
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
@@ -2749,36 +2751,41 @@ ${rankDistText}
     }
 
     console.log('[INFO] Generating stats image for:', playerName);
-    await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計画像を生成中...`);
+    // 即座に確認メッセージを返す
+    await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計画像を生成中...\n\n※生成には20-30秒かかる場合があります`);
     
-    try {
-      // タイムアウト付きで画像生成を実行（30秒）
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('画像生成がタイムアウトしました（30秒）')), 30000)
-      );
-      
-      const generationPromise = this.statsImageGenerator.generateStatsImage(
-        playerStats,
-        playerName,
-        records,
-        seasonKey
-      );
-      
-      console.log('[INFO] Waiting for image generation (with 30s timeout)...');
-      const result = await Promise.race([generationPromise, timeoutPromise]);
-      console.log('[INFO] Image generation completed or timed out');
-      
-      if (result.success) {
-        console.log('[INFO] Stats image generated successfully');
-        await this.lineAPI.pushImage(groupId, result.imageUrl);
-      } else {
-        console.error('[ERROR] Stats image generation failed:', result.error);
-        await this.lineAPI.pushMessage(groupId, `■ 画像生成に失敗しました\n\n${result.error}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
+    // バックグラウンドで画像生成を実行（ctx.waitUntilを使用）
+    const generateImage = async () => {
+      try {
+        console.log('[INFO] Starting background image generation...');
+        const result = await this.statsImageGenerator.generateStatsImage(
+          playerStats,
+          playerName,
+          records,
+          seasonKey
+        );
+        
+        if (result.success) {
+          console.log('[INFO] Stats image generated successfully');
+          await this.lineAPI.pushImage(groupId, result.imageUrl);
+        } else {
+          console.error('[ERROR] Stats image generation failed:', result.error);
+          await this.lineAPI.pushMessage(groupId, `■ 画像生成に失敗しました\n\n${result.error}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
+        }
+      } catch (error) {
+        console.error('[ERROR] Exception during stats image generation:', error);
+        console.error('[ERROR] Error stack:', error.stack);
+        await this.lineAPI.pushMessage(groupId, `■ 画像生成中にエラーが発生しました\n\n${error.message}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
       }
-    } catch (error) {
-      console.error('[ERROR] Exception during stats image generation:', error);
-      console.error('[ERROR] Error stack:', error.stack);
-      await this.lineAPI.pushMessage(groupId, `■ 画像生成中にエラーが発生しました\n\n${error.message}\n\nもう一度お試しいただくか、テキスト形式で統計を確認してください。\n例: @麻雀点数管理bot st ${playerName}`);
+    };
+    
+    // ctx.waitUntilがある場合は使用、ない場合は直接実行
+    if (this.ctx && this.ctx.waitUntil) {
+      console.log('[INFO] Using ctx.waitUntil for background processing');
+      this.ctx.waitUntil(generateImage());
+    } else {
+      console.log('[INFO] No ctx.waitUntil available, executing directly');
+      await generateImage();
     }
   }
   async handleSeasonCreate(groupId, seasonName, replyToken, ctx = null) {
