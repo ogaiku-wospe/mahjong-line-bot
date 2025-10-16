@@ -1748,9 +1748,9 @@ ${error.toString()}
         try {
           // 新しいreplyTokenなしで実行するため、直接ハンドラーを呼び出す
           if (suggestedCommand.match(/^(ランキング|順位|rank|ranking)$/)) {
-            await this.handleRanking(groupId, null, false, ctx);
+            await this.handleRanking(groupId, null, true);
           } else if (suggestedCommand.match(/^(ランキング画像|rankimg|ri|画像)$/)) {
-            await this.handleRankingImage(groupId, null, false, ctx);
+            await this.handleRankingImage(groupId, null, true, ctx);
           } else if (suggestedCommand.match(/^(シーズン一覧|sl|seasons)$/)) {
             // handleSeasonListはreplyTokenが必須なので、結果を取得してpushMessageで送信
             const seasons = await this.seasonManager.getAllSeasons();
