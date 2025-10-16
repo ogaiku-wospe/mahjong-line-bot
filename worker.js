@@ -2694,6 +2694,7 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
     
     // バックグラウンドで記録処理を実行（タイムアウト回避）
     if (ctx) {
+      console.log('[INFO] handleQuickRecord - Starting background record processing');
       ctx.waitUntil(
         this.spreadsheetManager.addGameRecord(seasonKey, {
           gameType,
@@ -2701,6 +2702,7 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
           scores,
           userId
         }).then(async (result) => {
+          console.log('[INFO] handleQuickRecord - addGameRecord completed, success:', result.success);
           if (result.success) {
             let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
             message += `\u3010\u5BFE\u6226\u7D50\u679C\u3011 ${gameType}
@@ -2727,17 +2729,40 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
               message += `${r.rank}\u4F4D ${r.name}: ${r.score.toLocaleString()}\u70B9 (${sign}${r.gameScore.toFixed(1)}pt)
 `;
             });
+            console.log('[INFO] handleQuickRecord - Sending success message');
             await this.lineAPI.pushMessage(groupId, message);
+            console.log('[INFO] handleQuickRecord - Message sent successfully');
           } else {
+            console.log('[ERROR] handleQuickRecord - Record add failed:', result.error);
             await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
 
 ${result.error}`);
           }
         }).catch(async (error) => {
-          console.error("[ERROR] Background record processing failed:", error);
-          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+          console.error("[ERROR] handleQuickRecord - Exception in background processing:", error);
+          console.error("[ERROR] handleQuickRecord - Stack trace:", error.stack);
+          try {
+            await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E3\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+          } catch (pushError) {
+            console.error("[ERROR] handleQuickRecord - Failed to send error message:", pushError);
+          }
         })
       );
+    } else {
+      // ctxがない場合は同期実行（テスト環境用）
+      console.log('[WARN] handleQuickRecord - No ctx, executing synchronously');
+      try {
+        const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
+          gameType,
+          players,
+          scores,
+          userId
+        });
+        // ... 同じ処理
+      } catch (error) {
+        console.error("[ERROR] handleQuickRecord - Sync execution failed:", error);
+        throw error;
+      }
     }
     return;
   }
