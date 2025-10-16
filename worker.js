@@ -1688,7 +1688,7 @@ ${error.toString()}
     return /^(ランキング|順位|rank|ranking)$/.test(command);
   }
   async showHelp(replyToken) {
-    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ よく使うコマンド（省略形）\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u\n・ヘルプ: @麻雀点数管理bot h\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h\n\n💡 省略形のコマンドを使うと素早く入力できます！";
+    const helpText = "【麻雀点数管理bot コマンド一覧】\n\n■ よく使うコマンド\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u\n・ヘルプ: @麻雀点数管理bot h\n\n■ 記録管理\n【手動記録】r [名前1] [点数1] [名前2] [点数2] ...\n  例: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n\n【メンション記録】r @ユーザー1 [点数1] @ユーザー2 [点数2] ...\n  例: @麻雀点数管理bot r @山田 32000 @鈴木 28000 @佐藤 24000 @田中 16000\n\n【画像解析記録】img\n  1. コマンドを実行: @麻雀点数管理bot img\n  2. 60秒以内に雀魂のスクリーンショットを送信\n  3. 解析結果のボタンをタップして記録\n\n【取り消し】u\n  例: @麻雀点数管理bot u\n\n■ ランキング・統計\n【ランキング】rank\n  例: @麻雀点数管理bot rank\n\n【ランキング画像】ri\n  例: @麻雀点数管理bot ri\n\n【統計】st [名前]\n  例: @麻雀点数管理bot st 山田\n\n【統計画像】stimg [名前]\n  例: @麻雀点数管理bot stimg 山田\n\n■ シーズン管理\n【シーズン作成】sc [シーズン名]\n  例: @麻雀点数管理bot sc 2024春\n\n【シーズン切替】sw [シーズン名]\n  例: @麻雀点数管理bot sw 2024春\n\n【シーズン一覧】sl\n  例: @麻雀点数管理bot sl\n\n■ プレイヤー管理\n【プレイヤー登録】pr [名前]\n  例: @麻雀点数管理bot pr 山田\n\n【プレイヤー一覧】pl\n  例: @麻雀点数管理bot pl\n\n■ その他\n【ヘルプ】h\n  例: @麻雀点数管理bot h";
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
   // ========== AI推測機能 ==========
@@ -1698,7 +1698,7 @@ ${error.toString()}
       if (!this.env || !this.env.GEMINI_API_KEY) {
         await this.lineAPI.replyMessage(
           replyToken,
-          "コマンドが認識できませんでした\n\n使い方を確認:\n@麻雀点数管理bot h\n\nよく使うコマンド（省略形）:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u"
+          "コマンドが認識できませんでした\n\n使い方を確認:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u"
         );
         return;
       }
@@ -1997,7 +1997,23 @@ ${error.toString()}
           } else {
             // どのコマンドにもマッチしなかった場合
             console.warn("[WARN] No matching command handler found for:", suggestedCommand);
-            await this.lineAPI.pushMessage(groupId, `■ コマンドを認識できませんでした\n\n推測されたコマンド: ${suggestedCommand}\n\nヘルプを表示:\n@麻雀点数管理bot h\n\nよく使うコマンド（省略形）:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u`);
+            
+            // 引数が必要なコマンドの場合は具体的なエラーメッセージを表示
+            if (suggestedCommand === 'r' || suggestedCommand === '記録' || suggestedCommand === 'rec') {
+              await this.lineAPI.pushMessage(groupId, `■ 記録コマンドには引数が必要です\n\n使い方:\n@麻雀点数管理bot r [名前1] [点数1] [名前2] [点数2] ...\n\n例:\n@麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000`);
+            } else if (suggestedCommand === 'st' || suggestedCommand === '統計' || suggestedCommand === 'stats') {
+              await this.lineAPI.pushMessage(groupId, `■ 統計コマンドにはプレイヤー名が必要です\n\n使い方:\n@麻雀点数管理bot st [プレイヤー名]\n\n例:\n@麻雀点数管理bot st 山田`);
+            } else if (suggestedCommand === 'stimg' || suggestedCommand === '統計画像' || suggestedCommand === 'statsimg') {
+              await this.lineAPI.pushMessage(groupId, `■ 統計画像コマンドにはプレイヤー名が必要です\n\n使い方:\n@麻雀点数管理bot stimg [プレイヤー名]\n\n例:\n@麻雀点数管理bot stimg 山田`);
+            } else if (suggestedCommand === 'sc' || suggestedCommand === 'シーズン作成') {
+              await this.lineAPI.pushMessage(groupId, `■ シーズン作成コマンドにはシーズン名が必要です\n\n使い方:\n@麻雀点数管理bot sc [シーズン名]\n\n例:\n@麻雀点数管理bot sc 2024春`);
+            } else if (suggestedCommand === 'sw' || suggestedCommand === 'シーズン切替') {
+              await this.lineAPI.pushMessage(groupId, `■ シーズン切替コマンドにはシーズン名が必要です\n\n使い方:\n@麻雀点数管理bot sw [シーズン名]\n\n例:\n@麻雀点数管理bot sw 2024春`);
+            } else if (suggestedCommand === 'pr' || suggestedCommand === 'プレイヤー登録') {
+              await this.lineAPI.pushMessage(groupId, `■ プレイヤー登録コマンドには名前が必要です\n\n使い方:\n@麻雀点数管理bot pr [プレイヤー名]\n\n例:\n@麻雀点数管理bot pr 山田`);
+            } else {
+              await this.lineAPI.pushMessage(groupId, `■ コマンドを認識できませんでした\n\n推測されたコマンド: ${suggestedCommand}\n\nヘルプを表示:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u`);
+            }
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
@@ -2122,7 +2138,7 @@ ${commandRef}
       } else {
         await this.lineAPI.replyMessage(
           replyToken,
-          "申し訳ございません。回答を生成できませんでした。\n\nヘルプ: @麻雀点数管理bot h\n\nよく使うコマンド（省略形）:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]"
+          "申し訳ございません。回答を生成できませんでした。\n\nヘルプ: @麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]"
         );
       }
     } catch (error) {
