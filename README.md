@@ -50,6 +50,13 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
 - **Status**: ✅ Active
+- **Latest Update**: 2025-10-16 - 統計コマンドエラー修正、AI推測コマンド改善
+
+### 📝 最新の修正内容
+1. **統計コマンドのエラー修正**: `st` コマンド実行時の `toFixed` エラーを修正
+2. **AI推測コマンドの改善**: 「らんく」などの推測コマンドが正しく実行されるように改善
+
+詳細は [DEPLOYMENT_STATUS.md](./DEPLOYMENT_STATUS.md) を参照してください。
 
 ## 🔧 技術スタック
 
@@ -66,6 +73,9 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 mahjong-line-bot/
 ├── worker.js              # デプロイ済みのバンドルコード
 ├── wrangler.jsonc         # Cloudflare設定
+├── deploy.sh              # デプロイスクリプト
+├── DEPLOYMENT.md          # デプロイ手順書
+├── DEPLOYMENT_STATUS.md   # デプロイ状況レポート
 ├── .gitignore            # Git除外設定
 └── README.md             # このファイル
 ```
@@ -98,16 +108,27 @@ npx wrangler secret put HCTI_API_KEY
 
 ### デプロイ
 
+#### 方法1: デプロイスクリプトを使用（推奨）
 ```bash
-# デプロイ
+./deploy.sh
+```
+
+#### 方法2: Wranglerコマンドを直接使用
+```bash
+# 1. Cloudflareにログイン（初回のみ）
+npx wrangler login
+
+# 2. デプロイ実行
 npx wrangler deploy
 
-# ログ確認
+# 3. ログ確認
 npx wrangler tail --format pretty
 
-# シークレット一覧
+# 4. シークレット一覧
 npx wrangler secret list
 ```
+
+詳細な手順は [DEPLOYMENT.md](./DEPLOYMENT.md) を参照してください。
 
 ## 📝 使い方
 
