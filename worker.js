@@ -2052,9 +2052,7 @@ ${error.toString()}
               });
               console.log('[INFO] Sending success message...');
               await this.lineAPI.pushMessage(groupId, message);
-              console.log('[INFO] Success message sent, fetching ranking...');
-              await this.handleRanking(groupId, null, true);
-              console.log('[INFO] Ranking sent successfully');
+              console.log('[INFO] Success message sent');
             } else {
               console.log('[ERROR] Failed to add record:', result.error);
               await this.lineAPI.pushMessage(groupId, `■ 記録の追加に失敗しました\n\n${result.error}`);
