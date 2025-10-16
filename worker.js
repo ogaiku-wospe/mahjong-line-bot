@@ -4126,7 +4126,7 @@ var StatsImageGenerator = class {
             viewport_width: viewportWidth,
             viewport_height: viewportHeight,
             device_scale: 2,
-            ms_delay: 0
+            ms_delay: 500
           })
         });
         
