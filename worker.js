@@ -2864,7 +2864,7 @@ ${rankDistText}
     }
 
     console.log('[INFO] Generating stats image for:', playerName);
-    await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計画像を生成中...`);
+    await this.lineAPI.replyMessage(replyToken, `${playerName}さんの統計を表示します...`);
     
     try {
       const result = await this.statsImageGenerator.generateStatsImage(
@@ -2907,7 +2907,8 @@ ${rankDistText}
 最低点: ${playerStats.minScore.toLocaleString()}点
 平均点: ${playerStats.avgRawScore.toFixed(0)}点
 
-※画像生成は現在利用できません（CPU時間制限）`;
+※画像生成はCloudflare Workers無料プランのCPU時間制限（10ms）により利用できません。
+※Paid Planへのアップグレード（$5/月〜）で画像生成が可能になります。`;
         
         await this.lineAPI.pushMessage(groupId, message);
       }
