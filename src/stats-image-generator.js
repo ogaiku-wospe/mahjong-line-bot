@@ -11,29 +11,40 @@ export class StatsImageGenerator {
   // 統計グラフ画像を生成（PNG形式）
   async generateStatsImage(playerStats, playerName, records, seasonKey) {
     try {
-      console.log('[INFO] Generating stats image for:', playerName);
+      console.log('[INFO] === Starting stats image generation ===');
+      console.log('[INFO] Player:', playerName);
+      console.log('[INFO] Total games:', playerStats.totalGames);
       
+      console.log('[INFO] Step 1: Generating HTML...');
       const html = this.generateStatsHTML(playerStats, playerName, records, seasonKey);
-      console.log('[INFO] Stats HTML generated, length:', html.length);
+      console.log('[INFO] HTML generated, length:', html.length);
       
+      console.log('[INFO] Step 2: Converting HTML to PNG...');
       const conversionResult = await this.convertHtmlToPng(html);
       
       if (!conversionResult.success) {
-        throw new Error('PNG conversion failed');
+        console.error('[ERROR] Conversion failed:', conversionResult.error);
+        throw new Error(`PNG conversion failed: ${conversionResult.error}`);
       }
       
+      console.log('[INFO] Step 3: Processing conversion result...');
       console.log(`[INFO] Conversion method: ${conversionResult.method}`);
       
-      // KVストレージに保存
-      const timestamp = Date.now();
-      const random = Math.random().toString(36).substring(7);
-      const imageKey = `stats/${timestamp}-${random}.png`;
+      // HCTI URLを直接返す（KV保存をスキップしてCPU時間を節約）
+      if (conversionResult.url) {
+        console.log('[INFO] Stats image generation COMPLETED (direct URL)');
+        console.log('[INFO] HCTI URL:', conversionResult.url);
+        return {
+          success: true,
+          imageUrl: conversionResult.url,
+          format: 'png',
+          method: conversionResult.method
+        };
+      }
       
-      let imageData;
-      let contentType = 'image/png';
-      
+      // 後方互換性: bufferがある場合はKVに保存
       if (conversionResult.buffer) {
-        // ArrayBufferをBase64に変換
+        console.log('[INFO] Converting buffer to base64...');
         const uint8Array = new Uint8Array(conversionResult.buffer);
         let binary = '';
         const chunkSize = 8192;
@@ -42,35 +53,39 @@ export class StatsImageGenerator {
           binary += String.fromCharCode.apply(null, chunk);
         }
         const base64 = btoa(binary);
-        imageData = base64;
-        console.log('[INFO] PNG image prepared, size:', conversionResult.buffer.byteLength, 'bytes');
-      } else {
-        throw new Error('No valid image data');
+        console.log('[INFO] Buffer converted, size:', conversionResult.buffer.byteLength, 'bytes');
+        
+        console.log('[INFO] Storing in KV...');
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(7);
+        const imageKey = `stats/${timestamp}-${random}.png`;
+        
+        await this.kv.put(imageKey, base64, {
+          expirationTtl: 86400,
+          metadata: {
+            contentType: 'image/png',
+            method: conversionResult.method,
+            playerName,
+            seasonKey,
+            createdAt: new Date().toISOString()
+          }
+        });
+        
+        const publicUrl = `https://mahjong-line-bot.ogaiku.workers.dev/images/${imageKey}`;
+        console.log('[INFO] Stats image stored in KV');
+        console.log('[INFO] Public URL:', publicUrl);
+        
+        return {
+          success: true,
+          imageUrl: publicUrl,
+          imageKey,
+          format: 'png',
+          method: conversionResult.method
+        };
       }
       
-      console.log('[INFO] Storing in KV...');
-      await this.kv.put(imageKey, imageData, {
-        expirationTtl: 86400, // 24時間
-        metadata: {
-          contentType,
-          method: conversionResult.method,
-          playerName,
-          seasonKey,
-          createdAt: formatJSTDateTime(new Date())
-        }
-      });
+      throw new Error('No valid image URL or buffer in conversion result');
       
-      const publicUrl = `https://mahjong-line-bot.ogaiku.workers.dev/images/${imageKey}`;
-      console.log('[INFO] Stats image generation successful');
-      console.log('[INFO] Public URL:', publicUrl);
-      
-      return {
-        success: true,
-        imageUrl: publicUrl,
-        imageKey,
-        format: 'png',
-        method: conversionResult.method
-      };
     } catch (error) {
       console.error('[ERROR] Stats image generation failed:', error);
       console.error('[ERROR] Error stack:', error.stack);
@@ -112,6 +127,7 @@ export class StatsImageGenerator {
       
       return {
         gameNumber: index + 1,
+        globalGameNumber: parseInt(record['対戦番号']) || (index + 1),  // グローバル対戦番号を追加
         score: cumulativeScore,
         date: record['対戦日'] || '',
         time: record['対戦時刻'] || ''
@@ -125,6 +141,9 @@ export class StatsImageGenerator {
       playerStats.rankDist[3] || 0,
       playerStats.rankDist[4] || 0
     ];
+
+    // ランダムなグラデーションカラーを生成（ヘッダーとボディで統一）
+    const gradientColor = this.getRandomGradient();
 
     const html = `
 <!DOCTYPE html>
@@ -143,7 +162,7 @@ export class StatsImageGenerator {
     }
     body {
       font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, ${gradientColor});
       padding: 40px;
       width: 1200px;
       min-height: 1400px;
@@ -155,7 +174,7 @@ export class StatsImageGenerator {
       overflow: hidden;
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, ${gradientColor});
       color: white;
       padding: 40px;
       text-align: center;
@@ -228,7 +247,9 @@ export class StatsImageGenerator {
     }
     .chart-wrapper {
       position: relative;
-      height: 380px;
+      height: 550px;
+      padding-top: 60px;
+      padding-bottom: 20px;
     }
     .positive {
       color: #28a745;
@@ -343,7 +364,7 @@ export class StatsImageGenerator {
     new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.gameNumber}戦`))},
+        labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.globalGameNumber}戦`))},
         datasets: [{
           label: '累積スコア',
           data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
@@ -451,9 +472,10 @@ export class StatsImageGenerator {
           datalabels: {
             anchor: 'end',
             align: 'top',
+            offset: 4,
             color: '#495057',
             font: {
-              size: 18,
+              size: 17,
               weight: 'bold'
             },
             formatter: function(value, context) {
@@ -466,6 +488,7 @@ export class StatsImageGenerator {
         scales: {
           y: {
             beginAtZero: true,
+            max: ${Math.ceil(Math.max(...rankData) * 1.2)},
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
             },
@@ -496,73 +519,67 @@ export class StatsImageGenerator {
   // HTMLをPNGに変換
   async convertHtmlToPng(html) {
     try {
-      console.log('[INFO] Attempting PNG conversion via image_generation tool');
+      console.log('[INFO] Converting HTML to PNG...');
+      console.log('[DEBUG] Environment variables check:');
+      console.log('  HCTI_API_USER_ID:', this.env.HCTI_API_USER_ID ? 'SET' : 'NOT SET');
+      console.log('  HCTI_API_KEY:', this.env.HCTI_API_KEY ? 'SET' : 'NOT SET');
+
+      if (!this.env.HCTI_API_USER_ID || !this.env.HCTI_API_KEY) {
+        throw new Error('HCTI API credentials not configured');
+      }
+
+      console.log('[INFO] Trying htmlcsstoimage.com API...');
       
-      // image_generation APIを使用してHTMLから画像を生成
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
+      const auth = btoa(`${this.env.HCTI_API_USER_ID}:${this.env.HCTI_API_KEY}`);
+      const response = await fetch('https://hcti.io/v1/image', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.env.OPENAI_API_KEY || ''}`
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'gpt-image-1',
-          prompt: `Convert this HTML to a high-quality image: ${html.substring(0, 4000)}`,
-          size: '1024x1024',
-          quality: 'hd',
-          n: 1
+        body: JSON.stringify({ 
+          html: html,
+          viewport_width: 1200,
+          viewport_height: 1600
         })
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.data && data.data[0] && data.data[0].url) {
-          // 画像URLから画像データを取得
-          const imageResponse = await fetch(data.data[0].url);
-          const imageBuffer = await imageResponse.arrayBuffer();
-          
-          return {
-            success: true,
-            buffer: imageBuffer,
-            method: 'openai-api'
-          };
-        }
+        console.log('[INFO] HCTI API response OK, parsing JSON...');
+        const text = await response.text();
+        console.log('[INFO] Response text length:', text.length);
+        const data = JSON.parse(text);
+        console.log('[INFO] HCTI API returned URL:', data.url);
+        console.log('[INFO] HCTI conversion successful, returning URL directly');
+        return { success: true, url: data.url, method: 'hcti-url' };
+      } else {
+        const errorText = await response.text();
+        console.error('[ERROR] HCTI API error response:', response.status, errorText);
+        throw new Error(`HCTI API error: ${response.status} - ${errorText}`);
       }
-      
-      console.log('[WARN] OpenAI API conversion failed, trying Cloudflare Browser Rendering API');
-      
-      // Cloudflare Browser Rendering APIを使用（利用可能な場合）
-      if (this.env.BROWSER) {
-        const browser = await this.env.BROWSER.launch();
-        const page = await browser.newPage();
-        await page.setContent(html);
-        await page.setViewport({ width: 1200, height: 1400 });
-        
-        // グラフの描画完了を待つ
-        await page.waitForTimeout(2000);
-        
-        const screenshot = await page.screenshot({ 
-          type: 'png',
-          fullPage: true
-        });
-        
-        await browser.close();
-        
-        return {
-          success: true,
-          buffer: screenshot,
-          method: 'cloudflare-browser'
-        };
-      }
-      
-      throw new Error('No PNG conversion method available');
-      
     } catch (error) {
-      console.error('[ERROR] PNG conversion error:', error);
+      console.error('[ERROR] PNG conversion failed:', error);
       return {
         success: false,
         error: error.message
       };
     }
+  }
+
+  // ランダムなグラデーションカラーを生成
+  getRandomGradient() {
+    const gradients = [
+      '#667eea 0%, #764ba2 100%',
+      '#f093fb 0%, #f5576c 100%',
+      '#4facfe 0%, #00f2fe 100%',
+      '#43e97b 0%, #38f9d7 100%',
+      '#fa709a 0%, #fee140 100%',
+      '#30cfd0 0%, #330867 100%',
+      '#a8edea 0%, #fed6e3 100%',
+      '#ff9a9e 0%, #fecfef 100%, #fecfef 100%',
+      '#ffecd2 0%, #fcb69f 100%',
+      '#ff6e7f 0%, #bfe9ff 100%'
+    ];
+    return gradients[Math.floor(Math.random() * gradients.length)];
   }
 }

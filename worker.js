@@ -1959,6 +1959,14 @@ ${error.toString()}
           } else if (suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)) {
             // 統計テキスト表示
             const playerName = suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)[2].trim();
+            
+            // プレイヤー名として不適切な文字列をチェック
+            const invalidPatterns = /を見たい|見せて|表示|確認|教えて|ください|です|ます|[？?！!]/;
+            if (invalidPatterns.test(playerName)) {
+              await this.lineAPI.pushMessage(groupId, "統計を表示するには、プレイヤー名を指定してください。\n\n例: @麻雀点数管理bot st 山田\n\n登録済みプレイヤーを確認:\n@麻雀点数管理bot pl");
+              return;
+            }
+            
             const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
             
             if (!seasonKey) {
@@ -1976,7 +1984,19 @@ ${error.toString()}
             const playerStats = stats.find((s) => s.name === playerName);
             
             if (!playerStats) {
-              await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。`);
+              const allNames = stats.map(s => s.name);
+              const candidates = this.findSimilarNames(playerName, allNames);
+              
+              if (candidates.length > 0) {
+                let message = `「${playerName}」さんの記録が見つかりません。\n\nもしかして:\n`;
+                candidates.forEach((c, i) => {
+                  message += `${i + 1}. ${c.name}\n`;
+                });
+                message += `\n正しい名前で再度お試しください。`;
+                await this.lineAPI.pushMessage(groupId, message);
+              } else {
+                await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。\n\n登録されているプレイヤー:\n@麻雀点数管理bot pl`);
+              }
               return;
             }
             
@@ -1995,6 +2015,14 @@ ${error.toString()}
           } else if (suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)) {
             // 統計画像生成
             const playerName = suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)[2].trim();
+            
+            // プレイヤー名として不適切な文字列をチェック
+            const invalidPatterns = /を見たい|見せて|表示|確認|教えて|ください|です|ます|[？?！!]/;
+            if (invalidPatterns.test(playerName)) {
+              await this.lineAPI.pushMessage(groupId, "統計画像を生成するには、プレイヤー名を指定してください。\n\n例: @麻雀点数管理bot stimg 山田\n\n登録済みプレイヤーを確認:\n@麻雀点数管理bot pl");
+              return;
+            }
+            
             const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
             
             if (!seasonKey) {
@@ -2012,7 +2040,19 @@ ${error.toString()}
             const playerStats = stats.find((s) => s.name === playerName);
             
             if (!playerStats) {
-              await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。`);
+              const allNames = stats.map(s => s.name);
+              const candidates = this.findSimilarNames(playerName, allNames);
+              
+              if (candidates.length > 0) {
+                let message = `「${playerName}」さんの記録が見つかりません。\n\nもしかして:\n`;
+                candidates.forEach((c, i) => {
+                  message += `${i + 1}. ${c.name}\n`;
+                });
+                message += `\n正しい名前で再度お試しください。`;
+                await this.lineAPI.pushMessage(groupId, message);
+              } else {
+                await this.lineAPI.pushMessage(groupId, `${playerName}さんの記録が見つかりません。\n\n登録されているプレイヤー:\n@麻雀点数管理bot pl`);
+              }
               return;
             }
             
@@ -2135,6 +2175,12 @@ ${commandRef}
 4. 具体的なコマンド例を提示してください
 5. 200文字以内で回答してください
 6. ユーザーの入力が不明確な場合は、「よく使うコマンド」を紹介してください
+
+# 重要な判断基準
+- 「記録見せて」「記録見たい」「記録確認」→ ランキング表示（rank）
+- 「統計見せて」「統計見たい」「統計確認」→ プレイヤー名を指定する必要があることを説明
+- 「成績見せて」「成績見たい」→ ランキング表示（rank）または統計（st [名前]）
+- 具体的なプレイヤー名が含まれていない場合は、名前指定が必要な旨を説明
 
 回答形式:
 【[機能名]】
@@ -2704,6 +2750,13 @@ ${imageResult.error}`);
   }
   // テキスト形式の統計表示
   async handleStatsText(groupId, playerName, replyToken) {
+    // プレイヤー名として不適切な文字列をチェック
+    const invalidPatterns = /を見たい|見せて|表示|確認|教えて|ください|です|ます|[？?！!]/;
+    if (invalidPatterns.test(playerName)) {
+      await this.lineAPI.replyMessage(replyToken, "統計を表示するには、プレイヤー名を指定してください。\n\n例: @麻雀点数管理bot st 山田\n\n登録済みプレイヤーを確認:\n@麻雀点数管理bot pl");
+      return;
+    }
+    
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
@@ -2765,6 +2818,13 @@ ${rankDistText}
 
   // 画像形式の統計表示
   async handleStatsImage(groupId, playerName, replyToken) {
+    // プレイヤー名として不適切な文字列をチェック
+    const invalidPatterns = /を見たい|見せて|表示|確認|教えて|ください|です|ます|[？?！!]/;
+    if (invalidPatterns.test(playerName)) {
+      await this.lineAPI.replyMessage(replyToken, "統計画像を生成するには、プレイヤー名を指定してください。\n\n例: @麻雀点数管理bot stimg 山田\n\n登録済みプレイヤーを確認:\n@麻雀点数管理bot pl");
+      return;
+    }
+    
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
@@ -4039,6 +4099,12 @@ var StatsImageGenerator = class {
   // HTMLをPNGに変換（RankingImageGeneratorと同じ方法を使用）
   async convertHtmlToPng(html) {
     console.log('[INFO] Converting HTML to PNG...');
+    
+    // Stats image固定サイズ
+    const viewportWidth = 1200;
+    const viewportHeight = 1600;
+    console.log(`[INFO] Stats image size: ${viewportWidth}x${viewportHeight}`);
+    
     const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
     
     console.log('[DEBUG] Environment variables check:');
@@ -4057,8 +4123,8 @@ var StatsImageGenerator = class {
           },
           body: JSON.stringify({
             html,
-            viewport_width: 1200,
-            viewport_height: 1400,
+            viewport_width: viewportWidth,
+            viewport_height: viewportHeight,
             device_scale: 2,
             ms_delay: 0
           })
@@ -4072,12 +4138,11 @@ var StatsImageGenerator = class {
           console.log('[INFO] Response text length:', text.length);
           const data = JSON.parse(text);
           console.log('[INFO] HCTI API returned URL:', data.url);
-          // 直接URLを返す（ダウンロードはスキップしてCPU時間を節約）
           console.log('[INFO] HCTI conversion successful, returning URL directly');
           return { success: true, url: data.url, method: 'hcti-url' };
         } else {
           const errorText = await response.text();
-          console.warn('[WARN] HCTI API failed:', response.status, errorText);
+          console.error('[ERROR] HCTI API failed:', response.status, errorText);
         }
       } catch (error) {
         console.error('[ERROR] HCTI API exception:', error.message);
