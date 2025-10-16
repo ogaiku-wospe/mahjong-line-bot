@@ -1,6 +1,6 @@
 # mahjong-line-bot
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com/)
 
@@ -50,24 +50,32 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 
 ## 🚀 デプロイ情報
 
-- **Version**: v1.0.0 ✨
+- **Version**: v1.1.0 ✨
 - **Platform**: Cloudflare Workers
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
 - **Status**: ✅ Active and Stable
 - **Latest Release**: 2025-10-16
-- **Worker Version ID**: `56f392ad-912d-46cd-bb17-0df48d4e11d3`
+- **Worker Version ID**: `1f050a94-4424-455a-a96f-1232ce163f0e`
 
-### 📝 v1.0.0 リリース内容
+### 📝 v1.1.0 リリース内容
 
-このバージョンは、すべての主要機能が実装され、安定動作が確認された初回リリースです。
+UX改善とメンション・雀魂名混在対応のマイナーバージョンアップです。
 
-**修正された問題**:
-1. ✅ 統計コマンドの`toFixed`エラー修正
-2. ✅ AI予測コマンド実行の修正
-3. ✅ ヘルプテキストの改善（重複削除、省略形優先）
-4. ✅ エラーメッセージの一貫性向上
-5. ✅ 統計画像生成のハングアップ問題修正（バックグラウンド処理化）
+**新機能・改善**:
+1. ✅ メンションと雀魂名の混在記録に対応
+   - 例: `r @user1 25000 ogaiku 25000 Joath 25000` が正しく動作
+   - AI推測コマンドでもメンション情報を保持
+2. ✅ ウェルカムメッセージの改善
+   - ヘルプ機能とAIコマンド補助を強調
+   - 初期設定手順からユーザーガイドへ変更
+3. ✅ ヘルプテキストの簡素化
+   - LINE結びつけコマンドの冗長な例を削除
+   - 混乱を招く説明文を削除
+4. ✅ ミュート通知の実装
+   - すべてのbotメッセージが通知なしで送信
+5. ✅ 絵文字の削除
+   - テキストベースの表示に統一（✅/❌ → [成功]/[失敗]）
 
 詳細は [CHANGELOG.md](./CHANGELOG.md) を参照してください。
 

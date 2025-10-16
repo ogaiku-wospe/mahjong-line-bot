@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-16
+
+### Added
+- **メンションと雀魂名の混在記録対応**
+  - 1つのコマンドでLINEメンション（@user）と雀魂名を混在させて記録可能に
+  - 例: `@麻雀点数管理bot r @虹太 25000 ogaiku 25000 Joath 25000 かとう71 25000`
+  - AI推測コマンド実行時も元のメンション情報を保持
+  - メンション未登録の場合は結びつけコマンドを提案
+
+### Changed
+- **ウェルカムメッセージの改善**
+  - 初期設定手順からヘルプ・AI補助機能の紹介へ変更
+  - ユーザーが「コマンドを覚えなくても話しかければいい」ことを即座に理解できる構成
+- **ヘルプテキストの簡素化**
+  - LINE結びつけコマンドの例を1つに統一（複数人の例のみ）
+  - 混乱を招く説明文「画像解析時に表示名が関連付けられます」を削除
+- **通知設定の改善**
+  - すべてのbotメッセージに`notificationDisabled: true`を追加
+  - botの返信時に通知が送られなくなり、ユーザー体験が向上
+- **UI表現の統一**
+  - 絵文字（✅/❌）をテキスト表示（[成功]/[失敗]）に変更
+  - 一括結びつけの結果表示をシンプルに
+
+### Technical Details
+- **Worker Version ID**: `1f050a94-4424-455a-a96f-1232ce163f0e`
+- **Upload Size**: 183.70 KiB (gzip: 34.89 KiB)
+- AI推測コマンド実行のクロージャが`mentionedUsers`を保持
+- メンション・雀魂名混在時の処理フロー改善
+
 ## [1.0.0] - 2025-10-16
 
 ### Added
@@ -61,4 +90,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 統計画像生成には20-30秒かかる場合があります
 - Cloudflare Workers無料プランの制限内で動作
 
+[1.1.0]: https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.0.0
