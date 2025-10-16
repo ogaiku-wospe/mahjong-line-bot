@@ -1,0 +1,28 @@
+{
+  "name": "mahjong-line-bot",
+  "version": "1.0.0",
+  "description": "LINE bot for managing mahjong game records with ranking, statistics, and AI features",
+  "main": "worker.js",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "mahjong",
+    "line-bot",
+    "cloudflare-workers",
+    "ranking",
+    "statistics"
+  ],
+  "author": "ogaiku",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ogaiku-wospe/mahjong-line-bot.git"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.2"
+  }
+}

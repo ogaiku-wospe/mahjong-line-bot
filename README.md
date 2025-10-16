@@ -1,5 +1,9 @@
 # mahjong-line-bot
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.0.0)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com/)
+
 麻雀点数管理LINE Bot - Cloudflare Workers版
 
 ## 📋 プロジェクト概要
@@ -46,17 +50,26 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 
 ## 🚀 デプロイ情報
 
+- **Version**: v1.0.0 ✨
 - **Platform**: Cloudflare Workers
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
-- **Status**: ✅ Active
-- **Latest Update**: 2025-10-16 - 統計コマンドエラー修正、AI推測コマンド改善
+- **Status**: ✅ Active and Stable
+- **Latest Release**: 2025-10-16
+- **Worker Version ID**: `56f392ad-912d-46cd-bb17-0df48d4e11d3`
 
-### 📝 最新の修正内容
-1. **統計コマンドのエラー修正**: `st` コマンド実行時の `toFixed` エラーを修正
-2. **AI推測コマンドの改善**: 「らんく」などの推測コマンドが正しく実行されるように改善
+### 📝 v1.0.0 リリース内容
 
-詳細は [DEPLOYMENT_STATUS.md](./DEPLOYMENT_STATUS.md) を参照してください。
+このバージョンは、すべての主要機能が実装され、安定動作が確認された初回リリースです。
+
+**修正された問題**:
+1. ✅ 統計コマンドの`toFixed`エラー修正
+2. ✅ AI予測コマンド実行の修正
+3. ✅ ヘルプテキストの改善（重複削除、省略形優先）
+4. ✅ エラーメッセージの一貫性向上
+5. ✅ 統計画像生成のハングアップ問題修正（バックグラウンド処理化）
+
+詳細は [CHANGELOG.md](./CHANGELOG.md) を参照してください。
 
 ## 🔧 技術スタック
 
