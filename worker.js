@@ -2687,9 +2687,17 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       return;
     }
     
-    // 即座に確認メッセージを送信
+    // 即座に成功メッセージを送信（記録前に通知）
+    const message = "\u25A0 \u8A18\u9332\u3092\u51E6\u7406\u3057\u307E\u3059\n\n" +
+      `${gameType}\n` +
+      `${players.join(', ')}\n` +
+      `${scores.map(s => s.toLocaleString()).join(', ')}点\n\n` +
+      `処理完了まで少々お待ちください...`;
+    
     if (replyToken) {
-      await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
+      await this.lineAPI.replyMessage(replyToken, message);
+    } else {
+      await this.lineAPI.pushMessage(groupId, message);
     }
     
     // バックグラウンドで記録処理を実行
@@ -2705,22 +2713,17 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
         console.log('[INFO] handleQuickRecord - Background: addGameRecord completed, success:', result.success);
         
         if (result.success) {
-          // シンプルなメッセージを送信
-          const message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n" +
-            `${gameType}\n` +
-            `${players.join(', ')}\n` +
-            `${scores.map(s => s.toLocaleString()).join(', ')}点`;
-          
-          await this.lineAPI.pushMessage(groupId, message);
-          console.log('[INFO] handleQuickRecord - Background: Success message sent');
+          // 成功通知
+          await this.lineAPI.pushMessage(groupId, "\u2705 \u8A18\u9332\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F");
+          console.log('[INFO] handleQuickRecord - Background: Success notification sent');
         } else {
           console.log('[ERROR] handleQuickRecord - Background: Record add failed:', result.error);
-          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
+          await this.lineAPI.pushMessage(groupId, `\u274C \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
         }
       } catch (error) {
         console.error("[ERROR] handleQuickRecord - Background exception:", error);
         try {
-          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+          await this.lineAPI.pushMessage(groupId, `\u274C \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
         } catch (pushError) {
           console.error("[ERROR] handleQuickRecord - Background: Failed to send error message:", pushError);
         }
