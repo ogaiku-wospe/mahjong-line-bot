@@ -2680,16 +2680,16 @@ ${result.error}`);
     console.log("[DEBUG] Score validation - Difference:", Math.abs(totalScore - expectedTotal));
     
     if (Math.abs(totalScore - expectedTotal) > 1e3) {
-      const msg = `\u25A0 \u70B9\u6570\u306E\u78BA\u8A8D
+      const msg = `■ 点数の確認
 
-\u5165\u529B\u3055\u308C\u305F\u5408\u8A08: ${totalScore.toLocaleString()}\u70B9
-\u6B63\u3057\u3044\u5408\u8A08: ${expectedTotal.toLocaleString()}\u70B9 (${gameType})
-\u5DEE\u5206: ${(totalScore - expectedTotal).toLocaleString()}\u70B9
+入力された合計: ${totalScore.toLocaleString()}点
+正しい合計: ${expectedTotal.toLocaleString()}点 (${gameType})
+差分: ${(totalScore - expectedTotal).toLocaleString()}点
 
-\u5404\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u70B9\u6570:
-${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
+各プレイヤーの点数:
+${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}点`).join('\n')}
 
-\u70B9\u6570\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`;
+点数を確認してください。`;
       if (replyToken) {
         await this.lineAPI.replyMessage(replyToken, msg);
       } else {
@@ -2698,56 +2698,93 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       return;
     }
     
-    // 即座に成功メッセージを送信（記録前に通知）
-    const message = "\u25A0 \u8A18\u9332\u3092\u51E6\u7406\u3057\u307E\u3059\n\n" +
-      `${gameType}\n` +
-      `${players.join(', ')}\n` +
-      `${scores.map(s => s.toLocaleString()).join(', ')}点\n\n` +
-      `処理完了まで少々お待ちください...`;
-    
+    // replyTokenがある場合は処理を待ってから応答（無料枠で運用）
+    // replyTokenがない場合はバックグラウンド処理+pushMessage（AI推測コマンド用）
     if (replyToken) {
-      await this.lineAPI.replyMessage(replyToken, message);
-    } else {
-      await this.lineAPI.pushMessage(groupId, message);
-    }
-    
-    // バックグラウンドで記録処理を実行
-    const processRecordInBackground = async () => {
+      // 同期的に処理して、完了後にreplyTokenで応答
+      console.log('[INFO] handleQuickRecord - Processing synchronously with replyToken');
       try {
-        console.log('[INFO] handleQuickRecord - Background: Starting record processing');
         const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
           gameType,
           players,
           scores,
           userId
         });
-        console.log('[INFO] handleQuickRecord - Background: addGameRecord completed, success:', result.success);
+        console.log('[INFO] handleQuickRecord - addGameRecord completed, success:', result.success);
         
         if (result.success) {
-          // 成功通知
-          await this.lineAPI.pushMessage(groupId, "[成功] 記録が完了しました");
-          console.log('[INFO] handleQuickRecord - Background: Success notification sent');
+          const successMessage = `[成功] 記録が完了しました
+
+${gameType}
+${players.join(', ')}
+${scores.map(s => s.toLocaleString()).join(', ')}点`;
+          await this.lineAPI.replyMessage(replyToken, successMessage);
+          console.log('[INFO] handleQuickRecord - Success message sent via replyToken');
         } else {
-          console.log('[ERROR] handleQuickRecord - Background: Record add failed:', result.error);
-          await this.lineAPI.pushMessage(groupId, `[失敗] 記録の追加に失敗しました\n\n${result.error}`);
+          console.log('[ERROR] handleQuickRecord - Record add failed:', result.error);
+          await this.lineAPI.replyMessage(replyToken, `[失敗] 記録の追加に失敗しました
+
+${result.error}`);
         }
       } catch (error) {
-        console.error("[ERROR] handleQuickRecord - Background exception:", error);
-        try {
-          await this.lineAPI.pushMessage(groupId, `[エラー] 記録処理中にエラーが発生しました\n\n${error.message}`);
-        } catch (pushError) {
-          console.error("[ERROR] handleQuickRecord - Background: Failed to send error message:", pushError);
-        }
+        console.error("[ERROR] handleQuickRecord - Exception:", error);
+        await this.lineAPI.replyMessage(replyToken, `[エラー] 記録処理中にエラーが発生しました
+
+${error.message}`);
       }
-    };
-    
-    // ctxがある場合はバックグラウンド実行、ない場合は同期実行
-    if (ctx) {
-      console.log('[INFO] handleQuickRecord - Scheduling background processing with ctx.waitUntil');
-      ctx.waitUntil(processRecordInBackground());
     } else {
-      console.log('[INFO] handleQuickRecord - No ctx, executing synchronously');
-      await processRecordInBackground();
+      // replyTokenがない場合（AI推測コマンドなど）
+      // 即座に処理開始メッセージを送信し、バックグラウンドで処理
+      console.log('[INFO] handleQuickRecord - No replyToken, using background processing');
+      const message = "■ 記録を処理します\n\n" +
+        `${gameType}\n` +
+        `${players.join(', ')}\n` +
+        `${scores.map(s => s.toLocaleString()).join(', ')}点\n\n` +
+        `処理完了まで少々お待ちください...`;
+      
+      await this.lineAPI.pushMessage(groupId, message);
+      
+      // バックグラウンドで記録処理を実行
+      const processRecordInBackground = async () => {
+        try {
+          console.log('[INFO] handleQuickRecord - Background: Starting record processing');
+          const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
+            gameType,
+            players,
+            scores,
+            userId
+          });
+          console.log('[INFO] handleQuickRecord - Background: addGameRecord completed, success:', result.success);
+          
+          if (result.success) {
+            await this.lineAPI.pushMessage(groupId, "[成功] 記録が完了しました");
+            console.log('[INFO] handleQuickRecord - Background: Success notification sent');
+          } else {
+            console.log('[ERROR] handleQuickRecord - Background: Record add failed:', result.error);
+            await this.lineAPI.pushMessage(groupId, `[失敗] 記録の追加に失敗しました
+
+${result.error}`);
+          }
+        } catch (error) {
+          console.error("[ERROR] handleQuickRecord - Background exception:", error);
+          try {
+            await this.lineAPI.pushMessage(groupId, `[エラー] 記録処理中にエラーが発生しました
+
+${error.message}`);
+          } catch (pushError) {
+            console.error("[ERROR] handleQuickRecord - Background: Failed to send error message:", pushError);
+          }
+        }
+      };
+      
+      // バックグラウンド実行
+      if (ctx) {
+        console.log('[INFO] handleQuickRecord - Scheduling background processing with ctx.waitUntil');
+        ctx.waitUntil(processRecordInBackground());
+      } else {
+        console.log('[INFO] handleQuickRecord - No ctx, executing synchronously');
+        await processRecordInBackground();
+      }
     }
     
     return;
