@@ -4100,9 +4100,9 @@ var StatsImageGenerator = class {
   async convertHtmlToPng(html) {
     console.log('[INFO] Converting HTML to PNG...');
     
-    // Stats image固定サイズ
+    // Stats image固定サイズ（レンダリング時間短縮のため小さめに設定）
     const viewportWidth = 1200;
-    const viewportHeight = 1600;
+    const viewportHeight = 1200;
     console.log(`[INFO] Stats image size: ${viewportWidth}x${viewportHeight}`);
     
     const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
@@ -4125,8 +4125,8 @@ var StatsImageGenerator = class {
             html,
             viewport_width: viewportWidth,
             viewport_height: viewportHeight,
-            device_scale: 2,
-            ms_delay: 500
+            device_scale: 1,
+            ms_delay: 0
           })
         });
         
