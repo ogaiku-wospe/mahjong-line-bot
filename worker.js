@@ -1225,12 +1225,11 @@ var LineAPI = class {
       to,
       messages: [{
         type: "text",
-        text,
-        notificationDisabled: true
+        text
       }]
     };
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -1238,8 +1237,15 @@ var LineAPI = class {
         },
         body: JSON.stringify(payload)
       });
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("[ERROR] pushMessage failed:", response.status, errorBody);
+        throw new Error(`LINE API error: ${response.status} - ${errorBody}`);
+      }
+      console.log("[INFO] pushMessage succeeded to:", to);
     } catch (error) {
-      console.error("pushMessage Error:", error);
+      console.error("[ERROR] pushMessage exception:", error);
+      throw error;
     }
   }
   async pushMessageWithQuickReply(to, text, quickReplyItems) {
@@ -1249,7 +1255,6 @@ var LineAPI = class {
       messages: [{
         type: "text",
         text,
-        notificationDisabled: true,
         quickReply: {
           items: quickReplyItems.map((item) => ({
             type: "action",
@@ -1259,7 +1264,7 @@ var LineAPI = class {
       }]
     };
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${this.accessToken}`,
@@ -1267,6 +1272,12 @@ var LineAPI = class {
         },
         body: JSON.stringify(payload)
       });
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("[ERROR] pushMessageWithQuickReply failed:", response.status, errorBody);
+        throw new Error(`LINE API error: ${response.status} - ${errorBody}`);
+      }
+      console.log("[INFO] pushMessageWithQuickReply succeeded to:", to);
     } catch (error) {
       console.error("pushMessageWithQuickReply Error:", error);
     }
