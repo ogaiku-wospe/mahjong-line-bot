@@ -1691,6 +1691,55 @@ ${error.toString()}
     const helpText = "\u3010\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B3\u30DE\u30F3\u30C9\u4E00\u89A7\u3011\n\n\u25A0 \u8A18\u9332\u7BA1\u7406\n\u3010\u624B\u52D5\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r [\u540D\u524D1] [\u70B9\u65701] [\u540D\u524D2] [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r \u5C71\u7530 32000 \u9234\u6728 28000 \u4F50\u85E4 24000 \u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  \u5C71\u7530 32000\n  \u9234\u6728 28000\n  \u4F50\u85E4 24000\n  \u7530\u4E2D 16000\n\n\u3010\u30E1\u30F3\u30B7\u30E7\u30F3\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u30E6\u30FC\u30B6\u30FC1 [\u70B9\u65701] @\u30E6\u30FC\u30B6\u30FC2 [\u70B9\u65702] ...\n  \u4F8B1: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r @\u5C71\u7530 32000 @\u9234\u6728 28000 @\u4F50\u85E4 24000 @\u7530\u4E2D 16000\n  \u4F8B2\uFF08\u6539\u884C\u53EF\uFF09: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot r\n  @\u5C71\u7530 32000\n  @\u9234\u6728 28000\n  @\u4F50\u85E4 24000\n  @\u7530\u4E2D 16000\n\n\u3010\u753B\u50CF\u89E3\u6790\u8A18\u9332\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\u89E3\u6790\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot img\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u89E3\u6790\n  1. \u30B3\u30DE\u30F3\u30C9\u3092\u5B9F\u884C\n  2. 60\u79D2\u4EE5\u5185\u306B\u96C0\u9B42\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9001\u4FE1\n  3. \u89E3\u6790\u7D50\u679C\u306E\u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3057\u3066\u8A18\u9332\n\n\u3010\u53D6\u308A\u6D88\u3057\u3011\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u53D6\u6D88\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot u\n  \u76F4\u524D\u306E\u8A18\u9332\u3092\u524A\u9664\n\n\u25A0 \u7D71\u8A08\u8868\u793A\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rank\n  \u5168\u4F53\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u8868\u793A\uFF08\u30C6\u30AD\u30B9\u30C8\u5F62\u5F0F\uFF09\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30E9\u30F3\u30AD\u30F3\u30B0\u753B\u50CF\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot rankimg\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot ri\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u753B\u50CF\n  \u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u753B\u50CF\u3092\u751F\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u7D71\u8A08 [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot st \u5C71\u7530\n  \u500B\u4EBA\u306E\u8A73\u7D30\u7D71\u8A08\u3092\u8868\u793A\uFF08\u30C6\u30AD\u30B9\u30C8\u5F62\u5F0F\uFF09\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u7D71\u8A08\u753B\u50CF [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot stimg [\u30D7\u30EC\u30A4\u30E4\u30FC\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot stimg \u5C71\u7530\n  \u30B9\u30B3\u30A2\u63A8\u79FB\u30B0\u30E9\u30D5\u3068\u9806\u4F4D\u5206\u5E03\u3092\u753B\u50CF\u8868\u793A\n\n\u25A0 \u30B7\u30FC\u30BA\u30F3\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sc [\u540D\u524D]\n  \u65B0\u3057\u3044\u30B7\u30FC\u30BA\u30F3\u3092\u4F5C\u6210\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u5207\u66FF [\u30AD\u30FC]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sw [\u30AD\u30FC]\n  \u30B7\u30FC\u30BA\u30F3\u3092\u5207\u308A\u66FF\u3048\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot sl\n  \u5168\u30B7\u30FC\u30BA\u30F3\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D7\u30EC\u30A4\u30E4\u30FC\u7BA1\u7406\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 [\u540D\u524D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr [\u540D\u524D]\n  \u30D7\u30EC\u30A4\u30E4\u30FC\u3092\u767B\u9332\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u767B\u9332 @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u30E6\u30FC\u30B6\u30FC [\u96C0\u9B42\u540D]\n  \u4F8B: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pr @\u5C71\u7530 SHIROKUMA3\n  LINE\u30A2\u30AB\u30A6\u30F3\u30C8\u3068\u96C0\u9B42\u540D\u3092\u7D10\u4ED8\u3051\n\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D7\u30EC\u30A4\u30E4\u30FC\u4E00\u89A7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot pl\n  \u767B\u9332\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u4E00\u89A7\u3092\u8868\u793A\n\n\u25A0 \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30D8\u30EB\u30D7\n@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot h\n  \u3053\u306E\u30D8\u30EB\u30D7\u3092\u8868\u793A";
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
+  // ========== 名前のあいまい検索 ==========
+  findSimilarNames(inputName, playerNames) {
+    if (!playerNames || playerNames.length === 0) return [];
+    
+    // レーベンシュタイン距離を計算
+    const levenshteinDistance = (str1, str2) => {
+      const matrix = [];
+      for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+      }
+      for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+          if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+      return matrix[str2.length][str1.length];
+    };
+    
+    // 類似度を計算（0-1の範囲）
+    const similarity = (str1, str2) => {
+      const distance = levenshteinDistance(str1, str2);
+      const maxLength = Math.max(str1.length, str2.length);
+      return 1 - distance / maxLength;
+    };
+    
+    // 類似度でソート
+    const candidates = playerNames
+      .map(name => ({
+        name,
+        similarity: similarity(inputName.toLowerCase(), name.toLowerCase())
+      }))
+      .filter(item => item.similarity > 0.5) // 50%以上の類似度
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 3); // 上位3件
+    
+    return candidates;
+  }
+
   // ========== AI推測機能 ==========
   async handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx) {
     try {
@@ -1698,7 +1747,7 @@ ${error.toString()}
       if (!this.env || !this.env.GEMINI_API_KEY) {
         await this.lineAPI.replyMessage(
           replyToken,
-          "コマンドが認識できませんでした\n\n使い方を確認:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・取消: @麻雀点数管理bot u"
+          "コマンドが認識できませんでした\n\n使い方を確認:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u\n\n質問もできます:\n例: シーズンを切り替えたい\n例: 統計を見たい"
         );
         return;
       }
@@ -2071,25 +2120,35 @@ ${error.toString()}
     try {
       const commandRef = this.getCommandReference();
       
-      const prompt = `あなたは麻雀点数管理botのサポートAIです。ユーザーの質問に対して、適切なコマンドと使い方を教えてください。
+      const prompt = `あなたは麻雀点数管理botのサポートAIです。ユーザーの入力に対して、適切なコマンドと使い方を教えてください。
 
 # コマンドリファレンス
 ${commandRef}
 
-# ユーザーの質問
+# ユーザーの入力
 "${userQuestion}"
 
 # 指示
-1. ユーザーの質問に対して、適切なコマンドを見つけてください
-2. コマンドの使い方を簡潔に説明してください
-3. 具体的なコマンド例を提示してください
-4. 200文字以内で回答してください
+1. ユーザーの入力が質問・依頼・コマンドのどれに近いか判断してください
+2. 最も関連性の高いコマンドを見つけてください
+3. コマンドの使い方を簡潔に説明してください
+4. 具体的なコマンド例を提示してください
+5. 200文字以内で回答してください
+6. ユーザーの入力が不明確な場合は、「よく使うコマンド」を紹介してください
 
 回答形式:
 【[機能名]】
 コマンド: @麻雀点数管理bot [コマンド]
 説明: [簡潔な説明]
-例: [具体例]`;
+例: [具体例]
+
+または（不明確な場合）:
+入力内容を認識できませんでした。
+
+よく使うコマンド:
+・記録: @麻雀点数管理bot r [名前] [点数] ...
+・ランキング: @麻雀点数管理bot rank
+・統計: @麻雀点数管理bot st [名前]`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.env.GEMINI_API_KEY}`,
@@ -2661,7 +2720,20 @@ ${imageResult.error}`);
     const stats = this.playerManager.calculateStatistics(records);
     const playerStats = stats.find((s) => s.name === playerName);
     if (!playerStats) {
-      await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。`);
+      // あいまい検索で候補を探す
+      const allNames = stats.map(s => s.name);
+      const candidates = this.findSimilarNames(playerName, allNames);
+      
+      if (candidates.length > 0) {
+        let message = `「${playerName}」さんの記録が見つかりません。\n\nもしかして:\n`;
+        candidates.forEach((c, i) => {
+          message += `${i + 1}. ${c.name}\n`;
+        });
+        message += `\n正しい名前で再度お試しください。`;
+        await this.lineAPI.replyMessage(replyToken, message);
+      } else {
+        await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。\n\n登録されているプレイヤー:\n@麻雀点数管理bot pl`);
+      }
       return;
     }
     
@@ -2709,7 +2781,20 @@ ${rankDistText}
     const stats = this.playerManager.calculateStatistics(records);
     const playerStats = stats.find((s) => s.name === playerName);
     if (!playerStats) {
-      await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。`);
+      // あいまい検索で候補を探す
+      const allNames = stats.map(s => s.name);
+      const candidates = this.findSimilarNames(playerName, allNames);
+      
+      if (candidates.length > 0) {
+        let message = `「${playerName}」さんの記録が見つかりません。\n\nもしかして:\n`;
+        candidates.forEach((c, i) => {
+          message += `${i + 1}. ${c.name}\n`;
+        });
+        message += `\n正しい名前で再度お試しください。`;
+        await this.lineAPI.replyMessage(replyToken, message);
+      } else {
+        await this.lineAPI.replyMessage(replyToken, `${playerName}さんの記録が見つかりません。\n\n登録されているプレイヤー:\n@麻雀点数管理bot pl`);
+      }
       return;
     }
     
