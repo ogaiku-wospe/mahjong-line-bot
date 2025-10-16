@@ -1431,7 +1431,21 @@ var MessageHandler = class {
         });
       }
     }
-    const command = text.replace(/@\S+\s*/g, "").trim();
+    
+    // メンション部分を除去してコマンドを抽出
+    // LINEのmentionには正確な位置情報（index, length）が含まれているため、それを使用
+    // スペースを含む表示名にも対応するため、正規表現ではなく位置情報を使用
+    let command = text;
+    if (mentions.length > 0) {
+      // メンションを後ろから削除（インデックスがずれないように）
+      const sortedMentions = [...mentions].sort((a, b) => b.index - a.index);
+      for (const mention of sortedMentions) {
+        const start = mention.index;
+        const end = mention.index + mention.length;
+        command = command.slice(0, start) + command.slice(end);
+      }
+    }
+    command = command.trim();
     
     if (this.kv && isMentioned) {
       this.lastMentionTime.set(groupId, Date.now());
@@ -2448,22 +2462,15 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       console.log('[INFO] Bulk linking LINE users to Mahjong names');
       console.log('[INFO] Mentioned users count:', mentionedUsers.length);
       console.log('[INFO] Rest of command:', restOfCommand);
+      console.log('[DEBUG] Rest of command length:', restOfCommand.length);
+      console.log('[DEBUG] Rest of command charCodes:', [...restOfCommand].map(c => c.charCodeAt(0)).join(','));
       
       // コマンドテキストからメンション以外のトークン（雀魂名）を抽出
-      // LINEメンションは "@" で始まるが、実際のテキストには表示名も含まれる可能性がある
-      // そのため、単純に "@" で始まらないトークンを雀魂名として扱う
+      // メンション部分は既に上流で削除されているため、残っているのは雀魂名のみのはず
       const words = restOfCommand.split(/\s+/).filter(w => w.trim());
-      const mahjongNames = [];
+      const mahjongNames = words;
       
       console.log('[DEBUG] All words:', words);
-      
-      // "@" で始まらないトークンを雀魂名として抽出
-      for (const word of words) {
-        if (!word.startsWith('@') && word.trim()) {
-          mahjongNames.push(word.trim());
-        }
-      }
-      
       console.log('[DEBUG] Extracted Mahjong names:', mahjongNames);
       
       // マッチング数を確認
