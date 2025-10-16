@@ -2708,32 +2708,18 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       });
       console.log('[INFO] handleQuickRecord - addGameRecord completed, success:', result.success);
       
+      // デバッグ: 完了通知
+      await this.lineAPI.pushMessage(groupId, `[DEBUG] addGameRecord完了: ${result.success}`);
+      
       if (result.success) {
+        console.log('[INFO] handleQuickRecord - Building result message...');
+        
+        // シンプルなメッセージを作成
         let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
-        message += `\u3010\u5BFE\u6226\u7D50\u679C\u3011 ${gameType}
-`;
-        const sortedResults = [];
-        for (let i = 0; i < players.length; i++) {
-          const rank = this.calculator.calculateRank(scores[i], scores);
-          const gameScore = this.calculator.calculateGameScore(
-            scores[i],
-            gameType,
-            rank,
-            players.length
-          );
-          sortedResults.push({
-            name: players[i],
-            score: scores[i],
-            rank,
-            gameScore
-          });
-        }
-        sortedResults.sort((a, b) => a.rank - b.rank);
-        sortedResults.forEach((r) => {
-          const sign = r.gameScore >= 0 ? "+" : "";
-          message += `${r.rank}\u4F4D ${r.name}: ${r.score.toLocaleString()}\u70B9 (${sign}${r.gameScore.toFixed(1)}pt)
-`;
-        });
+        message += `${gameType}\n`;
+        message += `プレイヤー: ${players.join(', ')}\n`;
+        message += `点数: ${scores.map(s => s.toLocaleString()).join(', ')}点`;
+        
         console.log('[INFO] handleQuickRecord - Sending success message');
         await this.lineAPI.pushMessage(groupId, message);
         console.log('[INFO] handleQuickRecord - Message sent successfully');
