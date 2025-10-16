@@ -1,4 +1,4 @@
-# Release Notes - v1.1.0
+# Release Notes - v1.3.0
 
 **リリース日**: 2025年10月16日  
 **タイプ**: マイナーバージョンアップ  
@@ -168,4 +168,4 @@ https://github.com/ogaiku-wospe/mahjong-line-bot/issues
 
 - [CHANGELOG.md](./CHANGELOG.md) - 詳細な変更履歴
 - [README.md](./README.md) - プロジェクト概要
-- [GitHub Releases](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0)
+- [GitHub Releases](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.3.0)

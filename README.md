@@ -1,6 +1,6 @@
 # mahjong-line-bot
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.3.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com/)
 
@@ -50,7 +50,7 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 
 ## 🚀 デプロイ情報
 
-- **Version**: v1.1.0 ✨
+- **Version**: v1.3.0 ✨
 - **Platform**: Cloudflare Workers
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
@@ -58,7 +58,7 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 - **Latest Release**: 2025-10-16
 - **Worker Version ID**: `dc7120be-ba78-422f-ba90-b555f1ac8abc`
 
-### 📝 v1.1.0 リリース内容
+### 📝 v1.3.0 リリース内容
 
 LINE API無料プラン最適化のマイナーバージョンアップです。
 
