@@ -4288,7 +4288,7 @@ async function handleLineWebhook(request, env, ctx) {
       }
     } else if (event.type === "join") {
       const groupId = event.source.groupId;
-      const welcomeMessage = "麻雀点数管理botを追加いただきありがとうございます。\n\n【最初にやること】\n1. シーズン作成\n   @麻雀点数管理bot sc 2024秋\n\n2. プレイヤー登録\n   @麻雀点数管理bot pr 山田\n\n3. LINEユーザーと雀魂名を結びつけ\n   @麻雀点数管理bot lk @山田 ogaiku\n\n【すぐ使える機能】\n・画像で記録: @麻雀点数管理bot img\n・手動記録: @麻雀点数管理bot r 山田 32000 鈴木 28000 佐藤 24000 田中 16000\n・ランキング: @麻雀点数管理bot rank\n\n全機能: @麻雀点数管理bot h";
+      const welcomeMessage = "麻雀点数管理botを追加いただきありがとうございます。\n\n【使い方がわからない時は】\n@麻雀点数管理bot h\nでヘルプを表示できます。\n\n【AIコマンド補助機能】\nコマンドを覚えなくても大丈夫です。\n普通に話しかけてください。\n\n例:\n・「記録したい」\n・「ランキング見せて」\n・「統計確認したい」\n・「シーズン作りたい」\n・「使い方教えて」\n\nAIが適切なコマンドを提案します。\n\n【主な機能】\n・画像解析で自動記録\n・ランキング表示\n・個人統計\n・シーズン管理\n\nまずは @麻雀点数管理bot h でヘルプをご覧ください。";
       await lineAPI.pushMessage(groupId, welcomeMessage);
     } else {
       console.log("[WARN] Unhandled event type:", event.type);
