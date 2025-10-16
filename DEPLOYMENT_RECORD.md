@@ -2,18 +2,16 @@
 
 ## 最新デプロイ
 
-### 2025-10-16 05:39:03 JST
-**Version ID**: 03c75cc1-af28-4004-9c6e-5915675d379a  
+### 2025-10-16 05:44:00 JST
+**Version ID**: a46d0fcb-0ba9-4d32-83b8-0e4ab72306f4  
 **Author**: ogaiku@utd-tec.com  
 **Status**: ✅ Success  
 **Worker URL**: https://mahjong-line-bot.ogaiku.workers.dev
 
 #### デプロイ内容
-- 統計コマンドのエラー修正（toFixed エラー）
-- AI推測コマンドの実行改善
-- プロパティ名の統一（totalGames, avgScore, avgRank, rankDist）
-- AI出力のクリーニング処理追加
-- エラーハンドリングの改善
+- **重要**: AI推測コマンドの実行修正（isPush=true に変更）
+- replyToken が null の場合に pushMessage を使用するように修正
+- 「らんく」などのコマンドで「実行中...」の後に止まる問題を解決
 
 #### アップロードサイズ
 - Total: 173.64 KiB
@@ -21,13 +19,27 @@
 
 #### GitHub Commit
 - **Branch**: main
-- **Commit**: 39b4ecc
-- **Message**: fix(stats,ai): Fix stats command error and improve AI command execution
+- **Commit**: 662349c
+- **Message**: fix(ai): Fix AI suggested command execution - use pushMessage instead of replyMessage
 
 #### テスト状況
 - [ ] 統計コマンド (`@麻雀点数管理bot st ogaiku`)
-- [ ] AI推測コマンド (`@麻雀点数管理bot らんく`)
+- [ ] AI推測コマンド (`@麻雀点数管理bot らんく`) ← **今回の修正対象**
 - [ ] その他の推測コマンド
+
+---
+
+### 2025-10-16 05:39:03 JST
+**Version ID**: 03c75cc1-af28-4004-9c6e-5915675d379a  
+**Author**: ogaiku@utd-tec.com  
+**Status**: ✅ Success
+
+#### デプロイ内容
+- 統計コマンドのエラー修正（toFixed エラー）
+- AI推測コマンドの実行改善
+- プロパティ名の統一（totalGames, avgScore, avgRank, rankDist）
+- AI出力のクリーニング処理追加
+- エラーハンドリングの改善
 
 ---
 
