@@ -1721,12 +1721,21 @@ ${error.toString()}
         return;
       }
 
-      // AIに推測させる
-      const suggestedCommand = await this.suggestCommandWithAI(command);
+      // AIに推測させる（タイムアウト付き）
+      console.log('[INFO] Suggesting command with AI for:', command);
+      const suggestPromise = this.suggestCommandWithAI(command);
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 10000)); // 10秒タイムアウト
+      const suggestedCommand = await Promise.race([suggestPromise, timeoutPromise]);
+      
+      console.log('[INFO] Suggested command:', suggestedCommand);
       
       if (!suggestedCommand) {
-        // 推測できない場合はAI回答機能を試す
-        await this.answerQuestionWithAI(command, replyToken, groupId);
+        console.log('[INFO] No command suggested, trying AI answer...');
+        // 推測できない場合は簡単なエラーメッセージを返す
+        await this.lineAPI.replyMessage(
+          replyToken,
+          `■ コマンドを認識できませんでした\n\n入力: ${command}\n\nヘルプを表示:\n@麻雀点数管理bot h\n\nよく使うコマンド:\n・記録: @麻雀点数管理bot r [名前] [点数] ...\n・ランキング: @麻雀点数管理bot rank\n・統計: @麻雀点数管理bot st [名前]\n・取消: @麻雀点数管理bot u`
+        );
         return;
       }
 
@@ -2216,8 +2225,13 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
 例:
 - 入力: "らんきんぐ" → 出力: "rank"
 - 入力: "とうけい おがいく" → 出力: "st ogaiku"
+- 入力: "とうけい" → 出力: "st"
+- 入力: "tokei" → 出力: "st"
+- 入力: "tokei ogaiku" → 出力: "st ogaiku"
 - 入力: "きろく" → 出力: "r"
-- 入力: "しーずん いちらん" → 出力: "sl"`;
+- 入力: "しーずん いちらん" → 出力: "sl"
+- 入力: "らんく" → 出力: "rank"
+- 入力: "rank" → 出力: "rank"`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.env.GEMINI_API_KEY}`,
