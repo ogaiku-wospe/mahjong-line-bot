@@ -1634,14 +1634,16 @@ var CommandRouter = class {
       }
       const statsImageMatch = command.match(/^(統計画像|stimg|statsimg)\s*(.*)$/);
       if (statsImageMatch) {
+        const commandUsed = statsImageMatch[1];
         const playerName = statsImageMatch[2].trim();
-        await this.handleStatsImage(groupId, playerName, replyToken);
+        await this.handleStatsImage(groupId, playerName, replyToken, commandUsed);
         return;
       }
       const statsMatch = command.match(/^(統計|st|stats)\s*(.*)$/);
       if (statsMatch) {
+        const commandUsed = statsMatch[1];
         const playerName = statsMatch[2].trim();
-        await this.handleStatsText(groupId, playerName, replyToken);
+        await this.handleStatsText(groupId, playerName, replyToken, commandUsed);
         return;
       }
       const seasonCreateMatch = command.match(/^(シーズン作成|sc|season create)\s+(.+)$/);
@@ -2672,7 +2674,7 @@ ${imageResult.error}`);
     }
   }
   // テキスト形式の統計表示
-  async handleStatsText(groupId, playerName, replyToken) {
+  async handleStatsText(groupId, playerName, replyToken, commandUsed = 'st') {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
@@ -2681,7 +2683,7 @@ ${imageResult.error}`);
     if (!playerName) {
       await this.lineAPI.replyMessage(
         replyToken,
-        "プレイヤー名を指定してください。\n例: @麻雀点数管理bot st 山田"
+        `プレイヤー名を指定してください。\n例: @麻雀点数管理bot ${commandUsed} 山田`
       );
       return;
     }
@@ -2720,7 +2722,7 @@ ${rankDistText}
   }
 
   // 画像形式の統計表示
-  async handleStatsImage(groupId, playerName, replyToken) {
+  async handleStatsImage(groupId, playerName, replyToken, commandUsed = 'stimg') {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
       await this.lineAPI.replyMessage(replyToken, "シーズンが設定されていません。");
@@ -2729,7 +2731,7 @@ ${rankDistText}
     if (!playerName) {
       await this.lineAPI.replyMessage(
         replyToken,
-        "プレイヤー名を指定してください。\n例: @麻雀点数管理bot stimg 山田"
+        `プレイヤー名を指定してください。\n例: @麻雀点数管理bot ${commandUsed} 山田`
       );
       return;
     }
