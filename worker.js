@@ -2879,11 +2879,71 @@ ${rankDistText}
         await this.lineAPI.pushImage(groupId, result.imageUrl);
       } else {
         console.error('[ERROR] Stats image generation failed:', result.error);
-        await this.lineAPI.pushMessage(groupId, `画像生成に失敗しました: ${result.error}`);
+        console.log('[INFO] Falling back to text stats format');
+        
+        // フォールバック: テキスト形式の統計を表示
+        const sign = playerStats.totalScore >= 0 ? '+' : '';
+        let rankDistText = '';
+        for (let rank = 1; rank <= 4; rank++) {
+          const count = playerStats.rankDist[rank] || 0;
+          if (count > 0) {
+            const rate = (count / playerStats.totalGames * 100).toFixed(1);
+            rankDistText += `${rank}位: ${count}回 (${rate}%)\n`;
+          }
+        }
+        
+        const message = `【${playerName}さんの統計】
+
+■総合成績
+総対戦数: ${playerStats.totalGames}戦
+合計スコア: ${sign}${playerStats.totalScore.toFixed(1)}pt
+平均スコア: ${sign}${playerStats.avgScore.toFixed(2)}pt/戦
+平均順位: ${playerStats.avgRank.toFixed(2)}位
+
+■順位分布
+${rankDistText}
+■点数統計
+最高点: ${playerStats.maxScore.toLocaleString()}点
+最低点: ${playerStats.minScore.toLocaleString()}点
+平均点: ${playerStats.avgRawScore.toFixed(0)}点
+
+※画像生成は現在利用できません（CPU時間制限）`;
+        
+        await this.lineAPI.pushMessage(groupId, message);
       }
     } catch (error) {
       console.error('[ERROR] Exception during stats image generation:', error);
-      await this.lineAPI.pushMessage(groupId, `画像生成中にエラーが発生しました: ${error.message}`);
+      console.log('[INFO] Falling back to text stats format due to exception');
+      
+      // 例外時もテキスト形式にフォールバック
+      const sign = playerStats.totalScore >= 0 ? '+' : '';
+      let rankDistText = '';
+      for (let rank = 1; rank <= 4; rank++) {
+        const count = playerStats.rankDist[rank] || 0;
+        if (count > 0) {
+          const rate = (count / playerStats.totalGames * 100).toFixed(1);
+          rankDistText += `${rank}位: ${count}回 (${rate}%)\n`;
+        }
+      }
+      
+      const message = `【${playerName}さんの統計】
+
+■総合成績
+総対戦数: ${playerStats.totalGames}戦
+合計スコア: ${sign}${playerStats.totalScore.toFixed(1)}pt
+平均スコア: ${sign}${playerStats.avgScore.toFixed(2)}pt/戦
+平均順位: ${playerStats.avgRank.toFixed(2)}位
+
+■順位分布
+${rankDistText}
+■点数統計
+最高点: ${playerStats.maxScore.toLocaleString()}点
+最低点: ${playerStats.minScore.toLocaleString()}点
+平均点: ${playerStats.avgRawScore.toFixed(0)}点
+
+※画像生成でエラーが発生しました`;
+      
+      await this.lineAPI.pushMessage(groupId, message);
     }
   }
   async handleSeasonCreate(groupId, seasonName, replyToken, ctx = null) {
