@@ -3020,7 +3020,7 @@ ${rankDistText}
 ■点数
 最高点棒: ${playerStats.maxScore.toLocaleString()}点
 最低点棒: ${playerStats.minScore.toLocaleString()}点
-平均点棒: ${playerStats.avgRawScore.toFixed(0)}点`;
+平均点棒: ${Math.round(playerStats.avgRawScore).toLocaleString()}点`;
     await this.lineAPI.replyMessage(replyToken, message);
   }
 
