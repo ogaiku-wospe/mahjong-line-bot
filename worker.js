@@ -1893,26 +1893,70 @@ ${error.toString()}
               return;
             }
             
-            // データをパース
+            // データをパース（メンションと雀魂名の混在に対応）
             const tokens = dataStr.trim().split(/[\s\n]+/).filter((t) => t);
-            if (tokens.length < 4 || tokens.length % 2 !== 0) {
-              await this.lineAPI.pushMessage(
-                groupId,
-                "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
-              );
-              return;
+            const scores = [];
+            const players = [];
+            
+            // まず点数を抽出
+            for (const token of tokens) {
+              const score = parseInt(token);
+              if (!isNaN(score)) {
+                scores.push(score);
+              }
             }
             
-            const players = [];
-            const scores = [];
-            for (let i = 0; i < tokens.length; i += 2) {
-              players.push(tokens[i]);
-              const score = parseInt(tokens[i + 1]);
-              if (isNaN(score)) {
-                await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
+            // メンションがある場合は、メンション情報を使用
+            if (mentionedUsers.length > 0) {
+              // メンション分のプレイヤーを追加
+              for (const user of mentionedUsers) {
+                const playerName = await this.playerManager.getPlayerNameByLineUserId(user.userId);
+                if (!playerName) {
+                  await this.lineAPI.pushMessage(
+                    groupId,
+                    `${user.displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${user.displayName} [雀魂名]」で結びつけてください。`
+                  );
+                  return;
+                }
+                players.push(playerName);
+              }
+              
+              // 残りのトークン（雀魂名）を追加
+              for (const token of tokens) {
+                const score = parseInt(token);
+                if (isNaN(score)) {
+                  // 数字でないものは雀魂名として追加
+                  players.push(token);
+                }
+              }
+            } else {
+              // メンションがない場合は従来通り
+              if (tokens.length < 4 || tokens.length % 2 !== 0) {
+                await this.lineAPI.pushMessage(
+                  groupId,
+                  "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
+                );
                 return;
               }
-              scores.push(score);
+              
+              for (let i = 0; i < tokens.length; i += 2) {
+                players.push(tokens[i]);
+                const score = parseInt(tokens[i + 1]);
+                if (isNaN(score)) {
+                  await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
+                  return;
+                }
+                scores.push(score);
+              }
+            }
+            
+            // プレイヤー数と点数の数が合っているか確認
+            if (players.length !== scores.length) {
+              await this.lineAPI.pushMessage(
+                groupId,
+                `プレイヤー数(${players.length})と点数の数(${scores.length})が一致しません。`
+              );
+              return;
             }
             
             const gameType = players.length === 3 ? "三麻半荘" : "四麻半荘";
