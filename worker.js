@@ -2449,40 +2449,32 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       console.log('[INFO] Mentioned users count:', mentionedUsers.length);
       console.log('[INFO] Rest of command:', restOfCommand);
       
-      // コマンドテキストからメンションとその後の雀魂名を抽出
-      // 例: "@user1 ogaiku @user2 player2" から [["ogaiku"], ["player2"]] を抽出
+      // コマンドテキストからメンション以外のトークン（雀魂名）を抽出
+      // LINEメンションは "@" で始まるが、実際のテキストには表示名も含まれる可能性がある
+      // そのため、単純に "@" で始まらないトークンを雀魂名として扱う
       const words = restOfCommand.split(/\s+/).filter(w => w.trim());
       const mahjongNames = [];
       
-      // メンションの数だけ雀魂名を抽出
-      let currentName = null;
+      console.log('[DEBUG] All words:', words);
+      
+      // "@" で始まらないトークンを雀魂名として抽出
       for (const word of words) {
-        // メンションの次の単語が雀魂名
-        if (currentName === null) {
-          currentName = word;
-        } else if (!word.startsWith('@')) {
-          // メンションではない = 雀魂名の一部かもしれない
-          currentName = word;
-        }
-        
-        // 次のメンション検出時、または配列の最後で雀魂名を確定
-        if (mahjongNames.length < mentionedUsers.length) {
-          const nextWordIndex = words.indexOf(word) + 1;
-          const nextWord = words[nextWordIndex];
-          if (!nextWord || nextWord.startsWith('@') || nextWordIndex >= words.length) {
-            if (currentName && !currentName.startsWith('@')) {
-              mahjongNames.push(currentName);
-              currentName = null;
-            }
-          }
+        if (!word.startsWith('@') && word.trim()) {
+          mahjongNames.push(word.trim());
         }
       }
       
+      console.log('[DEBUG] Extracted Mahjong names:', mahjongNames);
+      
       // マッチング数を確認
       if (mahjongNames.length !== mentionedUsers.length) {
+        console.log(`[ERROR] Mismatch: ${mentionedUsers.length} mentions vs ${mahjongNames.length} names`);
+        console.log('[ERROR] Mentioned users:', mentionedUsers.map(u => u.displayName).join(', '));
+        console.log('[ERROR] Mahjong names:', mahjongNames.join(', '));
+        
         await this.lineAPI.replyMessage(
           replyToken,
-          `■ エラー\n\nメンション数(${mentionedUsers.length}人)と雀魂名の数(${mahjongNames.length}個)が一致しません。\n\n正しい形式:\n@麻雀点数管理bot lk @ユーザー1 雀魂名1 @ユーザー2 雀魂名2`
+          `■ エラー\n\nメンション数(${mentionedUsers.length}人)と雀魂名の数(${mahjongNames.length}個)が一致しません。\n\n正しい形式:\n@麻雀点数管理bot lk @ユーザー1 雀魂名1 @ユーザー2 雀魂名2\n\n検出された雀魂名:\n${mahjongNames.join(', ')}`
         );
         return;
       }
