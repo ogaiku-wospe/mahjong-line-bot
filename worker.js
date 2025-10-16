@@ -2695,9 +2695,6 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
     // 記録処理を実行（一時的に同期実行でテスト）
     console.log('[INFO] handleQuickRecord - Starting record processing (sync mode for debugging)');
     
-    // デバッグ: 処理開始を通知
-    await this.lineAPI.pushMessage(groupId, `[DEBUG] 記録処理を開始します\nプレイヤー: ${players.join(', ')}\n点数: ${scores.join(', ')}`);
-    
     try {
       console.log('[INFO] handleQuickRecord - Calling addGameRecord...');
       const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
@@ -2708,26 +2705,20 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       });
       console.log('[INFO] handleQuickRecord - addGameRecord completed, success:', result.success);
       
-      // デバッグ: 完了通知
-      await this.lineAPI.pushMessage(groupId, `[DEBUG] addGameRecord完了: ${result.success}`);
-      
       if (result.success) {
-        console.log('[INFO] handleQuickRecord - Building result message...');
+        console.log('[INFO] handleQuickRecord - Building and sending result message...');
         
-        // シンプルなメッセージを作成
+        // シンプルなメッセージを1回だけ送信
         let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
         message += `${gameType}\n`;
         message += `プレイヤー: ${players.join(', ')}\n`;
         message += `点数: ${scores.map(s => s.toLocaleString()).join(', ')}点`;
         
-        console.log('[INFO] handleQuickRecord - Sending success message');
         await this.lineAPI.pushMessage(groupId, message);
         console.log('[INFO] handleQuickRecord - Message sent successfully');
       } else {
         console.log('[ERROR] handleQuickRecord - Record add failed:', result.error);
-        await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
-
-${result.error}`);
+        await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
       }
     } catch (error) {
       console.error("[ERROR] handleQuickRecord - Exception during record processing:", error);
