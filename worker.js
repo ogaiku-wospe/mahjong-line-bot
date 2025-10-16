@@ -2687,48 +2687,55 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
       return;
     }
     
-    // 即座に確認メッセージを送信（replyTokenがある場合のみ）
+    // 即座に確認メッセージを送信
     if (replyToken) {
       await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
     }
     
-    // 記録処理を実行（一時的に同期実行でテスト）
-    console.log('[INFO] handleQuickRecord - Starting record processing (sync mode for debugging)');
-    
-    try {
-      console.log('[INFO] handleQuickRecord - Calling addGameRecord...');
-      const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
-        gameType,
-        players,
-        scores,
-        userId
-      });
-      console.log('[INFO] handleQuickRecord - addGameRecord completed, success:', result.success);
-      
-      if (result.success) {
-        console.log('[INFO] handleQuickRecord - Building and sending result message...');
-        
-        // シンプルなメッセージを1回だけ送信
-        let message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n";
-        message += `${gameType}\n`;
-        message += `プレイヤー: ${players.join(', ')}\n`;
-        message += `点数: ${scores.map(s => s.toLocaleString()).join(', ')}点`;
-        
-        await this.lineAPI.pushMessage(groupId, message);
-        console.log('[INFO] handleQuickRecord - Message sent successfully');
-      } else {
-        console.log('[ERROR] handleQuickRecord - Record add failed:', result.error);
-        await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
-      }
-    } catch (error) {
-      console.error("[ERROR] handleQuickRecord - Exception during record processing:", error);
-      console.error("[ERROR] handleQuickRecord - Stack trace:", error.stack);
+    // バックグラウンドで記録処理を実行
+    const processRecordInBackground = async () => {
       try {
-        await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
-      } catch (pushError) {
-        console.error("[ERROR] handleQuickRecord - Failed to send error message:", pushError);
+        console.log('[INFO] handleQuickRecord - Background: Starting record processing');
+        const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
+          gameType,
+          players,
+          scores,
+          userId
+        });
+        console.log('[INFO] handleQuickRecord - Background: addGameRecord completed, success:', result.success);
+        
+        if (result.success) {
+          // シンプルなメッセージを送信
+          const message = "\u25A0 \u8A18\u9332\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\n\n" +
+            `${gameType}\n` +
+            `${players.join(', ')}\n` +
+            `${scores.map(s => s.toLocaleString()).join(', ')}点`;
+          
+          await this.lineAPI.pushMessage(groupId, message);
+          console.log('[INFO] handleQuickRecord - Background: Success message sent');
+        } else {
+          console.log('[ERROR] handleQuickRecord - Background: Record add failed:', result.error);
+          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F\n\n${result.error}`);
+        }
+      } catch (error) {
+        console.error("[ERROR] handleQuickRecord - Background exception:", error);
+        try {
+          await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+        } catch (pushError) {
+          console.error("[ERROR] handleQuickRecord - Background: Failed to send error message:", pushError);
+        }
       }
+    };
+    
+    // ctxがある場合はバックグラウンド実行、ない場合は同期実行
+    if (ctx) {
+      console.log('[INFO] handleQuickRecord - Scheduling background processing with ctx.waitUntil');
+      ctx.waitUntil(processRecordInBackground());
+    } else {
+      console.log('[INFO] handleQuickRecord - No ctx, executing synchronously');
+      await processRecordInBackground();
     }
+    
     return;
   }
   async handleUndo(groupId, replyToken) {
