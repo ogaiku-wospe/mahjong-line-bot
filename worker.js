@@ -1636,7 +1636,8 @@ var CommandRouter = class {
               groupId,
               mentionedUsers,
               restOfCommand,
-              replyToken
+              replyToken,
+              ctx
             );
             return;
           }
@@ -2457,7 +2458,7 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
     }
   }
   // ========== 複数LINEユーザーと雀魂ニックネームを一括結びつけ ==========
-  async handleBulkPlayerLink(groupId, mentionedUsers, restOfCommand, replyToken) {
+  async handleBulkPlayerLink(groupId, mentionedUsers, restOfCommand, replyToken, ctx) {
     try {
       console.log('[INFO] Bulk linking LINE users to Mahjong names');
       console.log('[INFO] Mentioned users count:', mentionedUsers.length);
@@ -2491,6 +2492,30 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       // 即座に処理開始メッセージを返す
       await this.lineAPI.replyMessage(replyToken, `■ 結びつけ処理中...\n\n${mentionedUsers.length}人のプレイヤーを処理しています...`);
       
+      // バックグラウンドで処理を実行（Cloudflare Workersの実行時間制限を回避）
+      if (ctx) {
+        ctx.waitUntil(
+          this.processBulkLinkAsync(groupId, mentionedUsers, mahjongNames)
+        );
+      } else {
+        // ctxがない場合は同期的に実行（テスト環境など）
+        await this.processBulkLinkAsync(groupId, mentionedUsers, mahjongNames);
+      }
+      
+    } catch (error) {
+      console.error('[ERROR] handleBulkPlayerLink failed:', error);
+      try {
+        await this.lineAPI.pushMessage(groupId, `■ エラーが発生しました\n\n${error.message}`);
+      } catch (pushError) {
+        console.error('[ERROR] Failed to send error message:', pushError);
+      }
+    }
+  }
+  
+  async processBulkLinkAsync(groupId, mentionedUsers, mahjongNames) {
+    try {
+      console.log('[INFO] Starting bulk link async processing');
+      
       // 各ユーザーを順次結びつけ
       const results = [];
       for (let i = 0; i < mentionedUsers.length; i++) {
@@ -2499,22 +2524,32 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
         
         console.log(`[INFO] Processing ${i + 1}/${mentionedUsers.length}: ${user.displayName} -> ${mahjongName}`);
         
-        const result = await this.playerManager.registerPlayerWithLine(
-          mahjongName,
-          user.userId,
-          user.displayName
-        );
-        
-        if (result.success) {
-          await this.seasonManager.registerPlayer(mahjongName);
+        try {
+          const result = await this.playerManager.registerPlayerWithLine(
+            mahjongName,
+            user.userId,
+            user.displayName
+          );
+          
+          if (result.success) {
+            await this.seasonManager.registerPlayer(mahjongName);
+          }
+          
+          results.push({
+            user: user.displayName,
+            mahjongName,
+            success: result.success,
+            message: result.message
+          });
+        } catch (error) {
+          console.error(`[ERROR] Failed to process ${user.displayName}:`, error);
+          results.push({
+            user: user.displayName,
+            mahjongName,
+            success: false,
+            message: error.message
+          });
         }
-        
-        results.push({
-          user: user.displayName,
-          mahjongName,
-          success: result.success,
-          message: result.message
-        });
       }
       
       // 結果をまとめて送信
@@ -2530,18 +2565,23 @@ Q: 新シーズンを始めたい → A: @麻雀点数管理bot sc [シーズン
       summaryMessage += `\n【結果詳細】\n`;
       
       results.forEach((r, i) => {
-        const status = r.success ? '成功' : '失敗';
-        summaryMessage += `${i + 1}. [${status}] ${r.user} → ${r.mahjongName}\n`;
+        const status = r.success ? '[成功]' : '[失敗]';
+        summaryMessage += `${i + 1}. ${status} ${r.user} → ${r.mahjongName}\n`;
         if (!r.success) {
           summaryMessage += `   理由: ${r.message}\n`;
         }
       });
       
       await this.lineAPI.pushMessage(groupId, summaryMessage);
+      console.log('[INFO] Bulk link async processing completed');
       
     } catch (error) {
-      console.error('[ERROR] handleBulkPlayerLink failed:', error);
-      await this.lineAPI.pushMessage(groupId, `■ エラーが発生しました\n\n${error.message}`);
+      console.error('[ERROR] processBulkLinkAsync failed:', error);
+      try {
+        await this.lineAPI.pushMessage(groupId, `■ 一括結びつけ処理でエラーが発生しました\n\n${error.message}`);
+      } catch (pushError) {
+        console.error('[ERROR] Failed to send error message:', pushError);
+      }
     }
   }
   
