@@ -1686,14 +1686,44 @@ var CommandRouter = class {
       const statsImageMatch = command.match(/^(統計画像|stimg|statsimg)\s*(.*)$/);
       if (statsImageMatch) {
         const commandUsed = statsImageMatch[1];
-        const playerName = statsImageMatch[2].trim();
+        let playerName = statsImageMatch[2].trim();
+        
+        // メンションがある場合は、LINE User IDから雀魂名を取得
+        if (mentionedUsers.length > 0) {
+          const resolvedName = await this.playerManager.getPlayerNameByLineUserId(mentionedUsers[0].userId);
+          if (resolvedName) {
+            playerName = resolvedName;
+          } else {
+            await this.lineAPI.replyMessage(
+              replyToken,
+              `${mentionedUsers[0].displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${mentionedUsers[0].displayName} [雀魂名]」で結びつけてください。`
+            );
+            return;
+          }
+        }
+        
         await this.handleStatsImage(groupId, playerName, replyToken, commandUsed, ctx);
         return;
       }
       const statsMatch = command.match(/^(統計|st|stats)\s*(.*)$/);
       if (statsMatch) {
         const commandUsed = statsMatch[1];
-        const playerName = statsMatch[2].trim();
+        let playerName = statsMatch[2].trim();
+        
+        // メンションがある場合は、LINE User IDから雀魂名を取得
+        if (mentionedUsers.length > 0) {
+          const resolvedName = await this.playerManager.getPlayerNameByLineUserId(mentionedUsers[0].userId);
+          if (resolvedName) {
+            playerName = resolvedName;
+          } else {
+            await this.lineAPI.replyMessage(
+              replyToken,
+              `${mentionedUsers[0].displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${mentionedUsers[0].displayName} [雀魂名]」で結びつけてください。`
+            );
+            return;
+          }
+        }
+        
         await this.handleStatsText(groupId, playerName, replyToken, commandUsed);
         return;
       }
@@ -1715,7 +1745,19 @@ var CommandRouter = class {
       }
       const playerMatch = command.match(/^(プレイヤー登録|pr|player reg)\s+(.+)$/);
       if (playerMatch) {
-        const playerName = playerMatch[2].trim();
+        let playerName = playerMatch[2].trim();
+        
+        // メンションがある場合は、結びつけとして処理
+        if (mentionedUsers.length > 0) {
+          await this.handlePlayerLink(
+            groupId,
+            mentionedUsers[0],
+            playerName,
+            replyToken
+          );
+          return;
+        }
+        
         await this.handlePlayerRegister(groupId, playerName, replyToken);
         return;
       }
@@ -2015,7 +2057,22 @@ ${error.toString()}
             }
           } else if (suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)) {
             // 統計テキスト表示
-            const playerName = suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)[2].trim();
+            let playerName = suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)[2].trim();
+            
+            // メンションがある場合は、LINE User IDから雀魂名を取得
+            if (mentionedUsers.length > 0) {
+              const resolvedName = await this.playerManager.getPlayerNameByLineUserId(mentionedUsers[0].userId);
+              if (resolvedName) {
+                playerName = resolvedName;
+              } else {
+                await this.lineAPI.pushMessage(
+                  groupId,
+                  `${mentionedUsers[0].displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${mentionedUsers[0].displayName} [雀魂名]」で結びつけてください。`
+                );
+                return;
+              }
+            }
+            
             const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
             
             if (!seasonKey) {
@@ -2051,7 +2108,22 @@ ${error.toString()}
             await this.lineAPI.pushMessage(groupId, message);
           } else if (suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)) {
             // 統計画像生成
-            const playerName = suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)[2].trim();
+            let playerName = suggestedCommand.match(/^(統計画像|stimg|statsimg)\s+(.+)$/)[2].trim();
+            
+            // メンションがある場合は、LINE User IDから雀魂名を取得
+            if (mentionedUsers.length > 0) {
+              const resolvedName = await this.playerManager.getPlayerNameByLineUserId(mentionedUsers[0].userId);
+              if (resolvedName) {
+                playerName = resolvedName;
+              } else {
+                await this.lineAPI.pushMessage(
+                  groupId,
+                  `${mentionedUsers[0].displayName}さんはプレイヤー登録されていません。\n「@麻雀点数管理bot lk @${mentionedUsers[0].displayName} [雀魂名]」で結びつけてください。`
+                );
+                return;
+              }
+            }
+            
             const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
             
             if (!seasonKey) {
