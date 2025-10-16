@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-10-16
+
+### Added
+- **LINEメンション完全対応**
+  - すべてのプレイヤー名指定コマンドでLINEメンションが使用可能に
+  - 統計表示コマンド (`st`) でメンション対応
+    - 例: `@麻雀点数管理bot st @虹太`
+  - 統計画像コマンド (`stimg`) でメンション対応
+    - 例: `@麻雀点数管理bot stimg @虹太`
+  - プレイヤー登録コマンド (`pr`) でメンション対応
+    - 例: `@麻雀点数管理bot pr @虹太 ogaiku`
+    - メンション付きの場合は自動的に結びつけとして処理
+  - AI推測コマンドでも完全対応
+  - メンション未登録時は結びつけコマンド (`lk`) を提案
+
+### Fixed
+- **統計テキスト表示の数値フォーマット改善**
+  - 平均点棒にカンマ区切りを追加
+  - 変更: `avgRawScore.toFixed(0)` → `Math.round(avgRawScore).toLocaleString()`
+  - 表示例: `28500点` → `28,500点`
+  - 最高点棒・最低点棒と表示形式を統一
+
+### Technical Details
+- **Worker Version ID**: `50e217c2-8395-4cf4-b8cc-cc993e7b5c3d`
+- **Upload Size**: 186.74 KiB (gzip: 35.08 KiB)
+- LINE User IDから雀魂名への自動解決機能を統計・登録コマンドに実装
+- 通常コマンドとAI推測コマンドの両方でメンション解決をサポート
+
 ## [1.1.0] - 2025-10-16
 
 ### Added
@@ -90,5 +118,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 統計画像生成には20-30秒かかる場合があります
 - Cloudflare Workers無料プランの制限内で動作
 
+[1.2.0]: https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.0.0

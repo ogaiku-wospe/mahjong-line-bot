@@ -1,6 +1,6 @@
 # mahjong-line-bot
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/ogaiku-wospe/mahjong-line-bot/releases/tag/v1.2.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Cloudflare%20Workers-orange.svg)](https://workers.cloudflare.com/)
 
@@ -50,32 +50,29 @@ LINE上で麻雀の点数を管理できるボットです。画像解析によ�
 
 ## 🚀 デプロイ情報
 
-- **Version**: v1.1.0 ✨
+- **Version**: v1.2.0 ✨
 - **Platform**: Cloudflare Workers
 - **Worker Name**: `mahjong-line-bot`
 - **Production URL**: https://mahjong-line-bot.ogaiku.workers.dev
 - **Status**: ✅ Active and Stable
 - **Latest Release**: 2025-10-16
-- **Worker Version ID**: `1f050a94-4424-455a-a96f-1232ce163f0e`
+- **Worker Version ID**: `50e217c2-8395-4cf4-b8cc-cc993e7b5c3d`
 
-### 📝 v1.1.0 リリース内容
+### 📝 v1.2.0 リリース内容
 
-UX改善とメンション・雀魂名混在対応のマイナーバージョンアップです。
+LINEメンション完全対応のマイナーバージョンアップです。
 
-**新機能・改善**:
-1. ✅ メンションと雀魂名の混在記録に対応
-   - 例: `r @user1 25000 ogaiku 25000 Joath 25000` が正しく動作
-   - AI推測コマンドでもメンション情報を保持
-2. ✅ ウェルカムメッセージの改善
-   - ヘルプ機能とAIコマンド補助を強調
-   - 初期設定手順からユーザーガイドへ変更
-3. ✅ ヘルプテキストの簡素化
-   - LINE結びつけコマンドの冗長な例を削除
-   - 混乱を招く説明文を削除
-4. ✅ ミュート通知の実装
-   - すべてのbotメッセージが通知なしで送信
-5. ✅ 絵文字の削除
-   - テキストベースの表示に統一（✅/❌ → [成功]/[失敗]）
+**新機能**:
+1. ✅ すべてのプレイヤー名指定コマンドでLINEメンション対応
+   - 統計表示: `st @user` でメンションから雀魂名を自動解決
+   - 統計画像: `stimg @user` でメンションから雀魂名を自動解決
+   - プレイヤー登録: `pr @user nickname` でメンション結びつけとして動作
+   - AI推測コマンドでも完全対応
+
+**修正**:
+2. ✅ 統計テキスト表示の平均点棒にカンマ区切り追加
+   - 表示例: `28500点` → `28,500点`
+   - 最高点棒・最低点棒と表示形式を統一
 
 詳細は [CHANGELOG.md](./CHANGELOG.md) を参照してください。
 
