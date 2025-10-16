@@ -3421,7 +3421,7 @@ var RankingImageGenerator = class {
         console.log("[INFO] Trying AbstractAPI...");
         const tempKey = `temp/${Date.now()}.html`;
         await this.kv.put(tempKey, html, { expirationTtl: 300 });
-        const tempUrl = `https://mahjong-line-bot.ogaiku.workers.dev/temp/${tempKey}`;
+        const tempUrl = `https://mahjong-line-bot.ogaiku.workers.dev/${tempKey}`;
         const response = await fetch(
           `https://screenshot.abstractapi.com/v1/?api_key=${this.env.ABSTRACT_API_KEY}&url=${encodeURIComponent(tempUrl)}&width=${viewportWidth}&height=${viewportHeight}`
         );
@@ -4087,18 +4087,61 @@ var StatsImageGenerator = class {
     const viewportHeight = isStatsImage ? 700 : 1100;
     console.log(`[INFO] Detected image type: ${isStatsImage ? 'stats' : 'ranking'}, size: ${viewportWidth}x${viewportHeight}`);
     
+    const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
     const hasAbstract = this.env?.ABSTRACT_API_KEY;
     
     console.log('[DEBUG] Environment variables check:');
+    console.log('  HCTI_API_USER_ID:', this.env?.HCTI_API_USER_ID ? 'SET' : 'NOT SET');
+    console.log('  HCTI_API_KEY:', this.env?.HCTI_API_KEY ? 'SET' : 'NOT SET');
     console.log('  ABSTRACT_API_KEY:', this.env?.ABSTRACT_API_KEY ? 'SET' : 'NOT SET');
     
-    // AbstractAPIを優先使用（HCTI APIより高速・安定）
+    // HCTI APIを最優先（ランキング画像で実証済み）
+    if (hasHCTI) {
+      try {
+        console.log('[INFO] Trying htmlcsstoimage.com API...');
+        const auth = btoa(`${this.env.HCTI_API_USER_ID}:${this.env.HCTI_API_KEY}`);
+        const response = await fetch('https://hcti.io/v1/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            html,
+            viewport_width: viewportWidth,
+            viewport_height: viewportHeight,
+            device_scale: isStatsImage ? 1 : 2,
+            ms_delay: 0
+          })
+        });
+        
+        console.log('[DEBUG] HCTI API response status:', response.status);
+        
+        if (response.ok) {
+          console.log('[INFO] HCTI API response OK, parsing JSON...');
+          const text = await response.text();
+          console.log('[INFO] Response text length:', text.length);
+          const data = JSON.parse(text);
+          console.log('[INFO] HCTI API returned URL:', data.url);
+          console.log('[INFO] HCTI conversion successful, returning URL directly');
+          return { success: true, url: data.url, method: 'hcti-url' };
+        } else {
+          const errorText = await response.text();
+          console.error('[ERROR] HCTI API failed:', response.status, errorText);
+        }
+      } catch (error) {
+        console.error('[ERROR] HCTI API exception:', error.message);
+        console.error('[ERROR] Error stack:', error.stack);
+      }
+    }
+    
+    // フォールバック: AbstractAPI
     if (hasAbstract) {
       try {
         console.log('[INFO] Trying AbstractAPI...');
         const tempKey = `temp/${Date.now()}.html`;
         await this.kv.put(tempKey, html, { expirationTtl: 300 });
-        const tempUrl = `https://mahjong-line-bot.ogaiku.workers.dev/temp/${tempKey}`;
+        const tempUrl = `https://mahjong-line-bot.ogaiku.workers.dev/${tempKey}`;
         
         console.log('[DEBUG] AbstractAPI request:', { tempUrl, viewportWidth, viewportHeight });
         const response = await fetch(
@@ -4221,6 +4264,25 @@ var src_default = {
         } catch (error) {
           console.error("[ERROR] Failed to fetch image from KV:", error);
           return new Response("Error fetching image", { status: 500 });
+        }
+      }
+      if (url.pathname.startsWith("/temp/")) {
+        const tempKey = url.pathname.substring(1);
+        try {
+          const html = await env.IMAGES.get(tempKey);
+          if (!html) {
+            return new Response("Temp file not found", { status: 404 });
+          }
+          return new Response(html, {
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "no-cache",
+              "Access-Control-Allow-Origin": "*"
+            }
+          });
+        } catch (error) {
+          console.error("[ERROR] Failed to fetch temp file from KV:", error);
+          return new Response("Error fetching temp file", { status: 500 });
         }
       }
       return new Response(JSON.stringify({ status: "ok", message: "Mahjong LINE Bot is running" }), {
