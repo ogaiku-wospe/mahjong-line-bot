@@ -1941,122 +1941,13 @@ ${error.toString()}
               await this.lineAPI.pushMessage(groupId, "■ エラー\n\n画像解析機能が利用できません。管理者に連絡してください。");
             }
           } else if (suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)) {
-            // 記録コマンド - バックグラウンド実行用
-            console.log('[INFO] AI record command detected');
+            // 記録コマンド - 既存のhandleQuickRecordメソッドを呼び出す
+            console.log('[INFO] AI record command detected, delegating to handleQuickRecord');
             const dataStr = suggestedCommand.match(/^(記録|r|rec)\s+(.+)$/)[2];
-            console.log('[INFO] Fetching season key...');
-            const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
-            console.log('[INFO] Season key:', seasonKey);
             
-            if (!seasonKey) {
-              console.log('[ERROR] No season key found');
-              await this.lineAPI.pushMessage(
-                groupId,
-                "シーズンが設定されていません。\n「@麻雀点数管理bot シーズン作成 [名前]」で作成してください。"
-              );
-              return;
-            }
-            
-            // データをパース（AI推測コマンドは交互形式）
-            const tokens = dataStr.trim().split(/[\s\n]+/).filter((t) => t);
-            const scores = [];
-            const players = [];
-            
-            console.log('[DEBUG] AI record - tokens:', tokens.join(', '));
-            
-            if (tokens.length < 4 || tokens.length % 2 !== 0) {
-              console.log('[ERROR] Invalid token count');
-              await this.lineAPI.pushMessage(
-                groupId,
-                "形式が正しくありません。\n正しい形式: @麻雀点数管理bot 記録 名前1 点数1 名前2 点数2 ..."
-              );
-              return;
-            }
-            
-            // 交互形式でパース（名前1 点数1 名前2 点数2 ...）
-            console.log('[INFO] Parsing alternating format...');
-            for (let i = 0; i < tokens.length; i += 2) {
-              players.push(tokens[i]);
-              const score = parseInt(tokens[i + 1]);
-              if (isNaN(score)) {
-                console.log('[ERROR] Invalid score:', tokens[i + 1]);
-                await this.lineAPI.pushMessage(groupId, `点数が不正です: ${tokens[i + 1]}`);
-                return;
-              }
-              scores.push(score);
-            }
-            console.log('[INFO] Parsed players:', players.join(', '));
-            console.log('[INFO] Parsed scores:', scores.join(', '));
-            
-            // プレイヤー数と点数の数が合っているか確認
-            if (players.length !== scores.length) {
-              console.log('[ERROR] Player/score count mismatch');
-              await this.lineAPI.pushMessage(
-                groupId,
-                `プレイヤー数(${players.length})と点数の数(${scores.length})が一致しません。`
-              );
-              return;
-            }
-            
-            const gameType = players.length === 3 ? "三麻半荘" : "四麻半荘";
-            const totalScore = scores.reduce((a, b) => a + b, 0);
-            const expectedTotal = players.length === 3 ? 105e3 : 1e5;
-            
-            console.log("[INFO] Game type:", gameType);
-            console.log("[INFO] Total score:", totalScore);
-            console.log("[INFO] Expected total:", expectedTotal);
-            
-            if (Math.abs(totalScore - expectedTotal) > 1e3) {
-              console.log('[WARN] Score total check failed');
-              await this.lineAPI.pushMessage(
-                groupId,
-                `■ 点数の確認\n\n入力された合計: ${totalScore.toLocaleString()}点\n正しい合計: ${expectedTotal.toLocaleString()}点 (${gameType})\n差分: ${(totalScore - expectedTotal).toLocaleString()}点\n\n各プレイヤーの点数:\n${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}点`).join('\n')}\n\n点数を確認してください。`
-              );
-              return;
-            }
-            
-            // 記録を追加
-            console.log('[INFO] Adding game record to spreadsheet...');
-            const result = await this.spreadsheetManager.addGameRecord(seasonKey, {
-              gameType,
-              players,
-              scores,
-              userId
-            });
-            console.log('[INFO] Add game record result:', result.success);
-            
-            if (result.success) {
-              console.log('[INFO] Record added successfully, generating message...');
-              let message = "■ 記録を追加しました\n\n";
-              message += `【対戦結果】 ${gameType}\n`;
-              const sortedResults = [];
-              for (let i = 0; i < players.length; i++) {
-                const rank = this.calculator.calculateRank(scores[i], scores);
-                const gameScore = this.calculator.calculateGameScore(
-                  scores[i],
-                  gameType,
-                  rank,
-                  players.length
-                );
-                sortedResults.push({
-                  name: players[i],
-                  score: scores[i],
-                  rank,
-                  gameScore
-                });
-              }
-              sortedResults.sort((a, b) => a.rank - b.rank);
-              sortedResults.forEach((r) => {
-                const sign = r.gameScore >= 0 ? "+" : "";
-                message += `${r.rank}位 ${r.name}: ${r.score.toLocaleString()}点 (${sign}${r.gameScore.toFixed(1)}pt)\n`;
-              });
-              console.log('[INFO] Sending success message...');
-              await this.lineAPI.pushMessage(groupId, message);
-              console.log('[INFO] Success message sent');
-            } else {
-              console.log('[ERROR] Failed to add record:', result.error);
-              await this.lineAPI.pushMessage(groupId, `■ 記録の追加に失敗しました\n\n${result.error}`);
-            }
+            // handleQuickRecordは内部でpushMessageを使うので、バックグラウンド実行に対応している
+            await this.handleQuickRecord(dataStr, groupId, userId, null, ctx);
+            console.log('[INFO] handleQuickRecord completed');
           } else if (suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)) {
             // 統計テキスト表示
             let playerName = suggestedCommand.match(/^(統計|st|stats)\s+(.+)$/)[2].trim();
@@ -2197,12 +2088,22 @@ ${error.toString()}
           }
         } catch (error) {
           console.error("[ERROR] AI command execution failed:", error);
-          await this.lineAPI.pushMessage(groupId, `\u25A0 \u30B3\u30DE\u30F3\u30C9\u5B9F\u884C\u4E2D\u306B\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\n\n${error.message}`);
+          console.error("[ERROR] Error stack:", error.stack);
+          try {
+            await this.lineAPI.pushMessage(groupId, `■ コマンド実行中にエラーが発生しました\n\n${error.message}\n\n詳細: ${error.stack?.slice(0, 200) || 'スタックトレースなし'}`);
+          } catch (pushError) {
+            console.error("[ERROR] Failed to send error message:", pushError);
+          }
         }
       };
 
       if (ctx) {
-        ctx.waitUntil(executeCommand());
+        ctx.waitUntil(
+          executeCommand().catch(error => {
+            console.error("[ERROR] Unhandled error in waitUntil:", error);
+            return this.lineAPI.pushMessage(groupId, `■ 予期しないエラーが発生しました\n\n${error.message}`);
+          })
+        );
       } else {
         await executeCommand();
       }
@@ -2723,18 +2624,22 @@ ${result.error}`);
   async handleQuickRecord(dataStr, groupId, userId, replyToken, ctx = null) {
     const seasonKey = await this.config.getCurrentSeason(groupId, this.sheets);
     if (!seasonKey) {
-      await this.lineAPI.replyMessage(
-        replyToken,
-        "\u30B7\u30FC\u30BA\u30F3\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u540D\u524D]\u300D\u3067\u4F5C\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
-      );
+      const msg = "\u30B7\u30FC\u30BA\u30F3\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\n\u300C@\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u30B7\u30FC\u30BA\u30F3\u4F5C\u6210 [\u540D\u524D]\u300D\u3067\u4F5C\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+      if (replyToken) {
+        await this.lineAPI.replyMessage(replyToken, msg);
+      } else {
+        await this.lineAPI.pushMessage(groupId, msg);
+      }
       return;
     }
     const tokens = dataStr.trim().split(/[\s\n]+/).filter((t) => t);
     if (tokens.length < 4 || tokens.length % 2 !== 0) {
-      await this.lineAPI.replyMessage(
-        replyToken,
-        "\u5F62\u5F0F\u304C\u6B63\u3057\u304F\u3042\u308A\u307E\u305B\u3093\u3002\n\u6B63\u3057\u3044\u5F62\u5F0F: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 \u540D\u524D1 \u70B9\u65701 \u540D\u524D2 \u70B9\u65702 ..."
-      );
+      const msg = "\u5F62\u5F0F\u304C\u6B63\u3057\u304F\u3042\u308A\u307E\u305B\u3093\u3002\n\u6B63\u3057\u3044\u5F62\u5F0F: @\u9EBB\u96C0\u70B9\u6570\u7BA1\u7406bot \u8A18\u9332 \u540D\u524D1 \u70B9\u65701 \u540D\u524D2 \u70B9\u65702 ...";
+      if (replyToken) {
+        await this.lineAPI.replyMessage(replyToken, msg);
+      } else {
+        await this.lineAPI.pushMessage(groupId, msg);
+      }
       return;
     }
     const players = [];
@@ -2743,7 +2648,12 @@ ${result.error}`);
       players.push(tokens[i]);
       const score = parseInt(tokens[i + 1]);
       if (isNaN(score)) {
-        await this.lineAPI.replyMessage(replyToken, `\u70B9\u6570\u304C\u4E0D\u6B63\u3067\u3059: ${tokens[i + 1]}`);
+        const msg = `\u70B9\u6570\u304C\u4E0D\u6B63\u3067\u3059: ${tokens[i + 1]}`;
+        if (replyToken) {
+          await this.lineAPI.replyMessage(replyToken, msg);
+        } else {
+          await this.lineAPI.pushMessage(groupId, msg);
+        }
         return;
       }
       scores.push(score);
@@ -2759,9 +2669,7 @@ ${result.error}`);
     console.log("[DEBUG] Score validation - Difference:", Math.abs(totalScore - expectedTotal));
     
     if (Math.abs(totalScore - expectedTotal) > 1e3) {
-      await this.lineAPI.replyMessage(
-        replyToken,
-        `\u25A0 \u70B9\u6570\u306E\u78BA\u8A8D
+      const msg = `\u25A0 \u70B9\u6570\u306E\u78BA\u8A8D
 
 \u5165\u529B\u3055\u308C\u305F\u5408\u8A08: ${totalScore.toLocaleString()}\u70B9
 \u6B63\u3057\u3044\u5408\u8A08: ${expectedTotal.toLocaleString()}\u70B9 (${gameType})
@@ -2770,13 +2678,19 @@ ${result.error}`);
 \u5404\u30D7\u30EC\u30A4\u30E4\u30FC\u306E\u70B9\u6570:
 ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
 
-\u70B9\u6570\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`
-      );
+\u70B9\u6570\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002`;
+      if (replyToken) {
+        await this.lineAPI.replyMessage(replyToken, msg);
+      } else {
+        await this.lineAPI.pushMessage(groupId, msg);
+      }
       return;
     }
     
-    // 即座に確認メッセージを送信
-    await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
+    // 即座に確認メッセージを送信（replyTokenがある場合のみ）
+    if (replyToken) {
+      await this.lineAPI.replyMessage(replyToken, "\u8A18\u9332\u3092\u51E6\u7406\u4E2D\u3067\u3059...");
+    }
     
     // バックグラウンドで記録処理を実行（タイムアウト回避）
     if (ctx) {
@@ -2814,7 +2728,6 @@ ${players.map((p, i) => `${p}: ${scores[i].toLocaleString()}\u70B9`).join('\n')}
 `;
             });
             await this.lineAPI.pushMessage(groupId, message);
-            await this.handleRanking(groupId, null, true);
           } else {
             await this.lineAPI.pushMessage(groupId, `\u25A0 \u8A18\u9332\u306E\u8FFD\u52A0\u306B\u5931\u6557\u3057\u307E\u3057\u305F
 
