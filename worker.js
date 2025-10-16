@@ -3972,14 +3972,6 @@ var StatsImageGenerator = class {
         </div>
       </div>
 
-      <!-- スコア推移グラフ -->
-      <div class="chart-container">
-        <h2>合計スコア推移</h2>
-        <div class="chart-wrapper">
-          <canvas id="lineChart"></canvas>
-        </div>
-      </div>
-
       <!-- 順位分布グラフ -->
       <div class="chart-container">
         <h2>順位分布グラフ</h2>
@@ -3998,78 +3990,6 @@ var StatsImageGenerator = class {
     // Chart.jsのデフォルト設定
     Chart.defaults.font.size = 16;
     Chart.defaults.font.family = "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif";
-
-    // 累積スコア推移グラフ
-    const lineCtx = document.getElementById('lineChart').getContext('2d');
-    new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: ${JSON.stringify(timeSeriesData.map(d => `第${d.globalGameNumber}戦`))},
-        datasets: [{
-          label: '合計スコア',
-          data: ${JSON.stringify(timeSeriesData.map(d => d.score))},
-          borderColor: 'rgb(102, 126, 234)',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointBackgroundColor: 'rgb(102, 126, 234)',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              font: { size: 16 },
-              padding: 20
-            }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: 12,
-            titleFont: { size: 16 },
-            bodyFont: { size: 14 },
-            callbacks: {
-              label: function(context) {
-                return '合計スコア: ' + context.parsed.y.toFixed(1) + 'pt';
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            },
-            ticks: {
-              font: { size: 14 },
-              callback: function(value) {
-                return value.toFixed(0) + 'pt';
-              }
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            },
-            ticks: {
-              font: { size: 14 },
-              maxRotation: 45,
-              minRotation: 45
-            }
-          }
-        }
-      }
-    });
 
     // 順位分布グラフ
     const barCtx = document.getElementById('barChart').getContext('2d');
@@ -4162,8 +4082,8 @@ var StatsImageGenerator = class {
     
     // HTMLからサイズを検出（統計画像は軽量化のため小さめに）
     const isStatsImage = html.includes('Chart.js') || html.includes('width: 1200px');
-    const viewportWidth = isStatsImage ? 1000 : 800;
-    const viewportHeight = isStatsImage ? 900 : 1100;
+    const viewportWidth = isStatsImage ? 800 : 800;
+    const viewportHeight = isStatsImage ? 700 : 1100;
     console.log(`[INFO] Detected image type: ${isStatsImage ? 'stats' : 'ranking'}, size: ${viewportWidth}x${viewportHeight}`);
     
     const hasHCTI = this.env?.HCTI_API_USER_ID && this.env?.HCTI_API_KEY;
