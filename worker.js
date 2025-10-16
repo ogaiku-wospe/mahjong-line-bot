@@ -1436,6 +1436,7 @@ var MessageHandler = class {
     // LINEのmentionには正確な位置情報（index, length）が含まれているため、それを使用
     // スペースを含む表示名にも対応するため、正規表現ではなく位置情報を使用
     let command = text;
+    const originalText = text;  // AI推測用に元のテキストを保持
     if (mentions.length > 0) {
       // メンションを後ろから削除（インデックスがずれないように）
       const sortedMentions = [...mentions].sort((a, b) => b.index - a.index);
@@ -1451,7 +1452,7 @@ var MessageHandler = class {
       this.lastMentionTime.set(groupId, Date.now());
     }
     
-    await commandRouter.route(command, groupId, userId, replyToken, mentionedUsers, ctx);
+    await commandRouter.route(command, groupId, userId, replyToken, mentionedUsers, ctx, originalText);
   }
   async handleImageMessage(event, ctx) {
     const sourceType = event.source.type;
@@ -1618,7 +1619,7 @@ var CommandRouter = class {
     this.messageHandler = messageHandler;
     this.env = env;
   }
-  async route(command, groupId, userId, replyToken, mentionedUsers = [], ctx = null) {
+  async route(command, groupId, userId, replyToken, mentionedUsers = [], ctx = null, originalText = null) {
     try {
       if (this.matchHelp(command)) {
         await this.showHelp(replyToken);
@@ -1781,7 +1782,7 @@ var CommandRouter = class {
         return;
       }
       // AI推測機能を試す
-      await this.handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx);
+      await this.handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx, originalText);
     } catch (error) {
       console.error("CommandRouter Error:", error);
       await this.lineAPI.replyMessage(replyToken, `\u25A0 \u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F
@@ -1802,7 +1803,7 @@ ${error.toString()}
     await this.lineAPI.replyMessage(replyToken, helpText);
   }
   // ========== AI推測機能 ==========
-  async handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx) {
+  async handleInvalidCommand(command, groupId, userId, replyToken, mentionedUsers, ctx, originalText = null) {
     try {
       // Gemini APIキーがない場合は従来のエラーメッセージ
       if (!this.env || !this.env.GEMINI_API_KEY) {
@@ -1830,8 +1831,10 @@ ${error.toString()}
       }
 
       // AIに推測させる（タイムアウト付き）
-      console.log('[INFO] Suggesting command with AI for:', command);
-      const suggestPromise = this.suggestCommandWithAI(command);
+      // AI推測にはメンションを含む元のテキストを使用
+      const textForAI = originalText || command;
+      console.log('[INFO] Suggesting command with AI for:', textForAI);
+      const suggestPromise = this.suggestCommandWithAI(textForAI);
       const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 10000)); // 10秒タイムアウト
       const suggestedCommand = await Promise.race([suggestPromise, timeoutPromise]);
       
