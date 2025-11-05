@@ -1532,8 +1532,10 @@ var MessageHandler = class {
     }
     
     await this.lineAPI.replyMessage(replyToken, "■ 画像を受信しました\n\n解析中です...少々お待ちください\n（解析には5-10秒ほどかかります）");
-    // KVへの保存を確実にするため、awaitで待機
-    await this.processImageAsync(groupId, messageId);
+    // 非同期処理で実行（タイムアウト回避）
+    ctx.waitUntil(
+      this.processImageAsync(groupId, messageId)
+    );
   }
   async processImageAsync(groupId, messageId) {
     try {
