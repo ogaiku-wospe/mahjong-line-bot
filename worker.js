@@ -1405,16 +1405,23 @@ var MessageHandler = class {
       console.log("[DEBUG] Stored command:", storedCommand);
       console.log("[DEBUG] Received text:", text.trim());
       
-      if (storedCommand && text.trim() === storedCommand.trim()) {
-        isImageAnalysisCommand = true;
-        await this.kv.delete(kvKey);
-        console.log("[INFO] Image analysis command detected (no mention required)");
-      } else if (storedCommand) {
-        console.log("[WARN] Command mismatch - stored vs received");
-        console.log("[WARN] Stored length:", storedCommand.length);
-        console.log("[WARN] Received length:", text.trim().length);
-        // 送信してデバッグ
-        await this.lineAPI.pushMessage(groupId, `[DEBUG] コマンドが一致しません\n\n保存: ${storedCommand}\n\n受信: ${text.trim()}`);
+      if (storedCommand) {
+        // 正規化して比較（空白の違いを吸収）
+        const normalizedStored = storedCommand.trim().replace(/\s+/g, ' ');
+        const normalizedReceived = text.trim().replace(/\s+/g, ' ');
+        
+        console.log("[DEBUG] Normalized stored:", normalizedStored);
+        console.log("[DEBUG] Normalized received:", normalizedReceived);
+        
+        if (normalizedStored === normalizedReceived) {
+          isImageAnalysisCommand = true;
+          await this.kv.delete(kvKey);
+          console.log("[INFO] Image analysis command detected (no mention required)");
+        } else {
+          console.log("[WARN] Command mismatch after normalization");
+          console.log("[WARN] Stored:", normalizedStored);
+          console.log("[WARN] Received:", normalizedReceived);
+        }
       } else {
         console.log("[DEBUG] No stored command found in KV");
       }
@@ -1525,9 +1532,8 @@ var MessageHandler = class {
     }
     
     await this.lineAPI.replyMessage(replyToken, "■ 画像を受信しました\n\n解析中です...少々お待ちください\n（解析には5-10秒ほどかかります）");
-    ctx.waitUntil(
-      this.processImageAsync(groupId, messageId)
-    );
+    // KVへの保存を確実にするため、awaitで待機
+    await this.processImageAsync(groupId, messageId);
   }
   async processImageAsync(groupId, messageId) {
     try {
