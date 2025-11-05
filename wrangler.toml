@@ -1,0 +1,9 @@
+name = "mahjong-line-bot"
+main = "worker.js"
+compatibility_date = "2024-11-05"
+
+account_id = "fcd0e55284be39175d81f469e2dbd2e2"
+
+[[kv_namespaces]]
+binding = "IMAGES"
+id = "253e79eb3fe04b7f8e322ff66471f590"

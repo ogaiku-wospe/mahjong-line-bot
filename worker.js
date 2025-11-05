@@ -1396,6 +1396,7 @@ var MessageHandler = class {
     
     // 画像解析結果からの記録コマンドかチェック（メンションなしでも許可）
     let isImageAnalysisCommand = false;
+    console.log("[DEBUG] KV available:", !!this.kv, "isMentioned:", isMentioned);
     if (this.kv && !isMentioned) {
       const kvKey = `image_analysis_result:${groupId}`;
       const storedCommand = await this.kv.get(kvKey);
@@ -1421,6 +1422,8 @@ var MessageHandler = class {
           console.log("[WARN] Command mismatch after normalization");
           console.log("[WARN] Stored:", normalizedStored);
           console.log("[WARN] Received:", normalizedReceived);
+          // デバッグ用にユーザーに通知
+          await this.lineAPI.pushMessage(groupId, `[デバッグ] コマンドが一致しません\n\n保存: "${normalizedStored}"\n受信: "${normalizedReceived}"\n\n長さ: ${normalizedStored.length} vs ${normalizedReceived.length}`);
         }
       } else {
         console.log("[DEBUG] No stored command found in KV");
