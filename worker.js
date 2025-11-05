@@ -1597,8 +1597,8 @@ ${recordCommand}
         await this.lineAPI.pushMessageWithQuickReply(groupId, confirmMsg, [
           {
             type: "message",
-            label: "\u3053\u306E\u5185\u5BB9\u3067\u8A18\u9332",
-            text: recordCommandNoMention
+            label: "この内容で記録",
+            text: recordCommand  // メンション付きコマンドを使用
           }
         ]);
         console.log("[INFO] Success message sent to group");
