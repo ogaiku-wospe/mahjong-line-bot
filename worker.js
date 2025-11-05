@@ -1397,6 +1397,15 @@ var MessageHandler = class {
     // 画像解析結果からの記録コマンドかチェック（メンションなしでも許可）
     let isImageAnalysisCommand = false;
     console.log("[DEBUG] KV available:", !!this.kv, "isMentioned:", isMentioned);
+    
+    // テキストとしてのメンションを除去（クイックリプライボタン対応）
+    let textWithoutMention = text.trim();
+    const botMentionPattern = /@麻雀点数管理bot\s*/;
+    if (botMentionPattern.test(textWithoutMention)) {
+      textWithoutMention = textWithoutMention.replace(botMentionPattern, '').trim();
+      console.log("[DEBUG] Text mention removed:", textWithoutMention);
+    }
+    
     if (this.kv && !isMentioned) {
       const kvKey = `image_analysis_result:${groupId}`;
       const storedCommand = await this.kv.get(kvKey);
@@ -1404,12 +1413,12 @@ var MessageHandler = class {
       console.log("[DEBUG] GroupId:", groupId);
       console.log("[DEBUG] KV Key:", kvKey);
       console.log("[DEBUG] Stored command:", storedCommand);
-      console.log("[DEBUG] Received text:", text.trim());
+      console.log("[DEBUG] Received text (after mention removal):", textWithoutMention);
       
       if (storedCommand) {
         // 正規化して比較（空白の違いを吸収）
         const normalizedStored = storedCommand.trim().replace(/\s+/g, ' ');
-        const normalizedReceived = text.trim().replace(/\s+/g, ' ');
+        const normalizedReceived = textWithoutMention.replace(/\s+/g, ' ');
         
         console.log("[DEBUG] Normalized stored:", normalizedStored);
         console.log("[DEBUG] Normalized received:", normalizedReceived);
@@ -1422,8 +1431,6 @@ var MessageHandler = class {
           console.log("[WARN] Command mismatch after normalization");
           console.log("[WARN] Stored:", normalizedStored);
           console.log("[WARN] Received:", normalizedReceived);
-          // デバッグ用にユーザーに通知
-          await this.lineAPI.pushMessage(groupId, `[デバッグ] コマンドが一致しません\n\n保存: "${normalizedStored}"\n受信: "${normalizedReceived}"\n\n長さ: ${normalizedStored.length} vs ${normalizedReceived.length}`);
         }
       } else {
         console.log("[DEBUG] No stored command found in KV");
@@ -1598,7 +1605,7 @@ ${recordCommand}
           {
             type: "message",
             label: "この内容で記録",
-            text: recordCommand  // メンション付きコマンドを使用
+            text: recordCommandNoMention  // メンションなしコマンドを使用
           }
         ]);
         console.log("[INFO] Success message sent to group");
